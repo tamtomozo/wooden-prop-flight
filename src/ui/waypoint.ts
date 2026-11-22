@@ -38,7 +38,9 @@ import { isHasty } from "../model/pilot";
 import type { Forecast, ForecastItem } from "../model/types";
 import { fogChance, headwindAt, spreadAt } from "../model/weather";
 import { fmtDuration, mechanicLine, openDialog, pilotTable, setActions } from "./dialog";
+import { pilotDiagramHtml } from "./pilotDiagram";
 import { inspectionHtml } from "./inspection";
+import { legProfileHtml } from "./legProfile";
 import { fmtClock } from "./panel";
 import { routePlanHtml } from "./routePlan";
 import { runTorque } from "./torque";
@@ -85,7 +87,6 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
       </button>`;
 
     const etaMin = est ? c.clockMin + est.minutes : Infinity;
-    const etaOk = etaMin <= c.world.sunsetMin - 30;
     const wx = legWeather(c);
     const destSpread = leg && Number.isFinite(etaMin) ? spreadAt(leg.to, etaMin) : 99;
 
@@ -108,7 +109,7 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
       ${notice ? `<div class="notice">点検の通知：${notice}</div>` : ""}
       ${inspectionHtml(a, { details: d, plain, haste: c.pilot.haste })}
       <h3>操縦者</h3>
-      ${pilotTable(c.pilot, d, { plain, haste: c.pilot.haste })}
+      ${plain ? pilotTable(c.pilot, d, { plain, haste: c.pilot.haste }) : pilotDiagramHtml(c.pilot, d, c.pilot.haste)}
       ${mechanicLine(adviceAtField(c))}
 
       <h3>整備と準備</h3>
@@ -142,20 +143,27 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
       })}
 
       ${
-        leg
+        leg && wx
           ? `<h3>${leg.from.name} → ${leg.to.name}</h3>
-      ${wx ? forecastHtml(wx.forecast, leg.distanceKm, leg.from.elevation) : ""}
-      <p class="small">${leg.note}　${leg.distanceKm} km・地上の風 ${leg.headwindKmh >= 0 ? `向かい風 ${leg.headwindKmh}` : `追い風 ${-leg.headwindKmh}`} km/h・すすめの巡航高度 ${leg.cruiseAltitude} m・着く先は ${leg.to.surface === "paved" ? "舗装" : "未舗装"}（湿度 ${leg.to.humidity}%）</p>`
+      <p class="small">${leg.note}</p>
+      ${legProfileHtml({
+        leg,
+        forecast: wx.forecast,
+        est,
+        nowMin: c.clockMin,
+        sunsetMin: c.world.sunsetMin,
+        fuelL: a.fuelRemaining,
+        capacityL: c.world.fuelCapacityL,
+        destSpread,
+      })}
+      <details class="howto">
+        <summary>予報と区間の数字（文字で見る）</summary>
+        ${forecastHtml(wx.forecast, leg.distanceKm, leg.from.elevation)}
+        <p class="small">${leg.distanceKm} km・地上の風 ${leg.headwindKmh >= 0 ? `向かい風 ${leg.headwindKmh}` : `追い風 ${-leg.headwindKmh}`} km/h・すすめの巡航高度 ${leg.cruiseAltitude} m・着く先は ${leg.to.surface === "paved" ? "舗装" : "未舗装"}（湿度 ${leg.to.humidity}%）</p>
+        ${est ? `<p class="small">目安（出力${PLAN_THROTTLE * 100}%・最良燃費）：約 ${fmtDuration(est.minutes)}・燃料 約 ${est.fuelL.toFixed(0)} L ＋ 予備 → 到着 ${etaMin < 24 * 60 ? fmtClock(etaMin) : "—"}</p>` : ""}
+      </details>`
           : ""
       }
-      ${
-        est
-          ? `<p class="plan">目安（出力${PLAN_THROTTLE * 100}%・最良燃費）：約 ${fmtDuration(est.minutes)}・燃料 約 ${est.fuelL.toFixed(0)} L ＋ 予備
-             → 到着 <b class="${etaOk ? "" : "ng-text"}">${etaMin < 24 * 60 ? fmtClock(etaMin) : "—"}</b>${etaOk ? "" : "（日没に近い・間に合わない）"}
-             ・今の燃料 ${a.fuelRemaining.toFixed(0)} L ${a.fuelRemaining >= est.fuelL + 8 ? "○" : "<b class=\"ng-text\">足りないかも</b>"}</p>`
-          : ""
-      }
-      ${leg ? `<p class="small">着く先の霧：到着予定 ${Number.isFinite(etaMin) ? fmtClock(etaMin) : "—"} ごろ、気温と露点の差 ${destSpread.toFixed(1)}℃・霧 <b class="${fogChance(destSpread) > 0 ? "ng-text" : ""}">${Math.round(fogChance(destSpread) * 100)}%</b>${fogChance(destSpread) > 0 ? "（霧なら上空で待つか、引き返す）" : ""}</p>` : ""}
       <p class="small">今の重さ ${Math.round(tc.weight)} kg・気温 ${tc.temperature.toFixed(0)}℃・離陸距離 ${Math.round(tc.distance)} m / 滑走路 ${tc.runway} m ${tc.ok ? "○" : "×（燃料を減らすか、涼しい時間を待つ）"}</p>
       ${problems.length ? `<p class="problems">${problems.join("・")}</p>` : ""}
       <button class="primary" data-act="depart" ${problems.length ? "disabled" : ""}>${leg ? `${leg.to.name}へ出発する` : "行き先を選ぶ"}</button>`,

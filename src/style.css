@@ -543,6 +543,88 @@ button { font: inherit; }
 .td-crush { stroke: var(--red); stroke-width: 1.6; stroke-linecap: round; }
 .td-crush-t { fill: var(--red); }
 
+/* E 操縦者の図（経由地） */
+.pilot-diagram { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+.pilot-diagram > .fd-note { grid-column: 1 / -1; margin: 0; }
+.pl-card { background: #1f2329; border-radius: 8px; padding: 8px 12px; font-size: 0.85rem; border-left: 4px solid var(--green); }
+.pl-card.yellow { border-left-color: var(--yellow); }
+.pl-card.red { border-left-color: var(--red); }
+.pl-card.yellow .pl-word { color: var(--yellow); }
+.pl-card.red .pl-word { color: var(--red); }
+.pl-card .fd-head small { color: var(--muted); font-weight: 400; }
+.pl-gauge { position: relative; margin: 4px 0 2px; }
+.pl-track { position: absolute; left: 0; right: 0; top: 16px; height: 12px; border-radius: 6px; }
+.pl-now { position: absolute; top: 11px; height: 22px; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--text); box-shadow: 0 0 0 2px #1f2329; }
+.pl-mark-label { position: absolute; top: 0; transform: translateX(-50%); font-size: 0.68rem; color: var(--muted); white-space: nowrap; }
+.pl-mark-label::after { content: ""; position: absolute; left: 50%; top: 14px; height: 18px; border-left: 1px dashed var(--muted); }
+.pl-arrow { position: absolute; height: 2px; }
+.pl-arrow::after { content: ""; position: absolute; top: -4px; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+.pl-arrow.down { background: var(--blue); }
+.pl-arrow.down::after { left: -2px; border-right: 7px solid var(--blue); }
+.pl-arrow.up { background: var(--red); }
+.pl-arrow.up::after { right: -2px; border-left: 7px solid var(--red); }
+.pl-amt { position: absolute; font-size: 0.68rem; font-weight: 700; line-height: 14px; white-space: nowrap; }
+.pl-amt.down { color: var(--blue); }
+.pl-amt.up { color: var(--red); }
+.pl-legend { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 0.75rem; color: var(--muted); }
+.pl-move i { display: inline-block; width: 14px; height: 2px; margin-right: 4px; vertical-align: 3px; }
+.pl-move.down i { background: var(--blue); }
+.pl-move.up i { background: var(--red); }
+.pl-move.down b { color: var(--blue); }
+.pl-move.up b { color: var(--red); }
+.dialog .pl-effects { list-style: none; padding: 0; margin: 6px 0 0; font-size: 0.8rem; line-height: 1.6; }
+.pl-effects b { color: var(--text); }
+.dialog .pl-line { margin: 4px 0 0; font-size: 0.78rem; color: var(--muted); }
+
+/* 区間の断面図（経由地） */
+.leg-profile { display: grid; gap: 8px; }
+.lp-scroll { overflow-x: auto; background: #1f2329; border-radius: 8px; padding: 6px 4px; }
+.lp-svg { display: block; width: 100%; min-width: 600px; }
+.lp-t { font-size: 9.5px; fill: var(--muted); }
+.lp-grid { stroke: #2c323a; stroke-width: 1; }
+.lp-ground { fill: #3d4a3b; stroke: #6f8a68; stroke-width: 1; }
+.lp-ridge-t { fill: #9fb897; }
+.lp-path { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; }
+.lp-path-t { fill: var(--accent); font-weight: 700; }
+.lp-field { fill: var(--text); }
+.lp-field-t { fill: var(--text); font-weight: 700; }
+.lp-cloud { fill: #c9ced6; }
+.lp-cloud.off { fill: none; stroke: #c9ced6; stroke-width: 1.2; stroke-dasharray: 4 3; }
+.lp-cloud-t { fill: #e9ecef; font-weight: 700; paint-order: stroke; stroke: #1f2329; stroke-width: 2.5px; }
+.lp-rain { fill: url(#lp-rain-pat); }
+.lp-rain-line { stroke: var(--blue); stroke-width: 1.3; }
+.lp-rain-t { fill: var(--blue); }
+.lp-cb { fill: rgba(239, 90, 90, 0.45); stroke: var(--red); stroke-width: 1.2; }
+.lp-cb-t { fill: var(--red); font-weight: 700; }
+.lp-danger { fill: none; stroke: var(--red); stroke-width: 1.2; stroke-dasharray: 3 2; }
+.lp-turb { fill: none; stroke: var(--yellow); stroke-width: 1.4; }
+.lp-turb-t { fill: var(--yellow); }
+.lp-frz { stroke: #8fd3ff; stroke-width: 1; stroke-dasharray: 2 3; }
+.lp-frz-t { fill: #8fd3ff; }
+.lp-wind { stroke-width: 2; }
+.lp-wind.head { stroke: var(--red); }
+.lp-wind.tail { stroke: var(--green); }
+.lp-ah.head { fill: var(--red); }
+.lp-ah.tail { fill: var(--green); }
+.lp-wind-t.head { fill: var(--red); }
+.lp-wind-t.tail { fill: var(--green); }
+.lp-key.head { color: var(--red); }
+.lp-key.tail { color: var(--green); }
+.leg-profile > .fd-note { margin: 0; }
+.lp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+.lp-card { background: #1f2329; border-radius: 8px; padding: 8px 12px; font-size: 0.85rem; }
+.lp-bar { position: relative; height: 14px; border-radius: 4px; background: #15181c; border: 1px solid var(--line); overflow: hidden; }
+.lp-bar i { position: absolute; left: 0; top: 0; bottom: 0; }
+.lp-bar i.ok { background: var(--green); }
+.lp-bar i.ng { background: var(--red); }
+.lp-bar em { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; }
+.lp-bar em.limit { background: var(--yellow); }
+.lp-bar em.sunset { background: var(--red); width: 3px; }
+.lp-fuel i.have { background: var(--blue); }
+.lp-fuel .need { position: absolute; left: 0; top: 2px; bottom: 2px; border: 1.5px solid var(--text); border-radius: 3px; }
+.lp-fuel .res { position: absolute; top: 2px; bottom: 2px; background: repeating-linear-gradient(135deg, rgba(239, 90, 90, 0.9) 0 3px, transparent 3px 6px); border: 1.5px solid var(--red); border-left: none; border-radius: 0 3px 3px 0; }
+.lp-scale { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+
 .fd-runways { container-type: inline-size; }
 @container (max-width: 480px) {
   .fd-rw { grid-template-columns: 1fr auto; row-gap: 4px; }
