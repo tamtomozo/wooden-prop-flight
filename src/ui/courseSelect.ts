@@ -1,12 +1,14 @@
-// 最初の画面：コースを選ぶ。陸路では行けない海峡・諸島・大洋を飛びこえる旅。
+// 最初の画面：コースを選ぶ。陸路では行けない海峡・諸島・大洋と、高い山脈を飛びこえる旅。
 import { COURSES } from "../data/courses";
-import { field, legBetween, longestSeaKm, pathDistance, shortestPath } from "../data/world";
+import { field, legBetween, longestSeaKm, pathDistance, shortestPath, WORLD } from "../data/world";
 import type { World } from "../model/types";
 import { mechanicLine, openDialog, setActions } from "./dialog";
 import { mapSvg } from "./mapView";
 
 /** 地図の中の、ひと続きの海の上の長さ（いちばん長い道と、いちばん短い道） */
 const maxSeaKm = (w: World) => Math.max(0, ...w.edges.map((e) => longestSeaKm(legBetween(w, e.a, e.b))));
+/** 地図の中で、いちばん高い山 m（山がなければ 0） */
+const highestRidge = (w: World) => Math.max(0, ...w.edges.flatMap((e) => e.terrain.map((r) => r.height)));
 const minSeaKm = (w: World) => {
   const sea = w.edges.map((e) => longestSeaKm(legBetween(w, e.a, e.b))).filter((k) => k > 0);
   return sea.length ? Math.min(...sea) : 0;
@@ -17,8 +19,11 @@ export function showCourseSelect(onChoose: (w: World) => void, current?: string)
     const path = shortestPath(w, w.startId, w.goalId);
     const lo = minSeaKm(w);
     const hi = maxSeaKm(w);
-    const sea = hi > 0 ? `海の上 ${lo === hi ? hi : `${lo}〜${hi}`} km` : "海はない";
-    return `<button class="course-card ${w.id === current ? "on" : ""} ${w.land ? "" : "practice"}" data-act="course" data-id="${w.id}">
+    const ridge = highestRidge(w);
+    const sea = [hi > 0 ? `海の上 ${lo === hi ? hi : `${lo}〜${hi}`} km` : "", ridge > 0 ? `いちばん高い山 ${ridge} m` : ""]
+      .filter(Boolean)
+      .join("・") || "海も山もない";
+    return `<button class="course-card ${w.id === current ? "on" : ""} ${w.id === WORLD.id ? "practice" : ""}" data-act="course" data-id="${w.id}">
       ${mapSvg(w, { current: w.startId, destination: null, selectable: [], suggested: path, mini: true })}
       <span class="course-body">
         <b class="course-title">${w.title}</b>
@@ -32,8 +37,8 @@ export function showCourseSelect(onChoose: (w: World) => void, current?: string)
 
   openDialog(
     `<h2>コースを選ぶ</h2>
-    <p class="lead">陸の道では行けない、海の向こうへ。木のプロペラ機で、海峡・諸島・大洋を飛びこえる。</p>
-    ${mechanicLine("海の上では、エンジンが止まったら降りる畑はない。燃料と天気と、引き返す勇気がすべてだ。")}
+    <p class="lead">陸の道では行けない、海の向こう・山の向こうへ。木のプロペラ機で、海峡・諸島・大洋・山脈を飛びこえる。</p>
+    ${mechanicLine("海の上では、エンジンが止まったら降りる畑はない。山の上では、空気が薄くて上がらない。燃料と天気と、引き返す勇気がすべてだ。")}
     <div class="course-list">${cards}</div>`,
     { wide: true },
   );

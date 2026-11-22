@@ -3,8 +3,8 @@
 import * as THREE from "three";
 import { DETOUR_ANGLE, DISORIENT_LIMIT_MIN } from "../config";
 import { seaAt } from "../data/world";
-import { groundElevation, type FlightState } from "../game/flight";
-import type { LegWeather, RunwaySurface } from "../model/types";
+import { groundElevation, terrainAt, type FlightState } from "../game/flight";
+import type { Leg, LegWeather, RunwaySurface } from "../model/types";
 import { skyAt, type RGB } from "./sky";
 
 /** 雲を置く高さの基準（見た目用。巡航中の機体はだいたいこの高さ） */
@@ -44,6 +44,8 @@ export class BackScene {
   private hemi = new THREE.HemisphereLight(0xcfe8ff, 0x5a7a4a, 1.6);
   private dir = new THREE.DirectionalLight(0xffffff, 2.2);
   private groundTex: THREE.CanvasTexture;
+  /** 山の上で地面に重ねる岩の色（高いほど濃く） */
+  private rock: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>;
   private plane = new THREE.Group();
   private prop = new THREE.Group();
   private propDisc: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>;
@@ -113,6 +115,13 @@ export class BackScene {
     ground.rotation.x = -Math.PI / 2;
     ground.position.z = -GROUND_SIZE / 2 + 600;
     this.scene.add(ground);
+    this.rock = new THREE.Mesh(
+      new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE),
+      new THREE.MeshLambertMaterial({ color: 0x9b958c, transparent: true, depthWrite: false }),
+    );
+    this.rock.rotation.x = -Math.PI / 2;
+    this.rock.position.set(0, 0.3, ground.position.z);
+    this.scene.add(this.rock);
 
     // 海：海の上の範囲だけ、地面の上に海面を重ねる
     const seaTex = makeSeaTexture();
@@ -319,6 +328,12 @@ export class BackScene {
     this.t += realDt;
     const p = s.perf;
     const rough = p.mixture.zone === "tooLean" && s.status === "flying";
+
+    // 山の上では、地面を岩の色に寄せる（谷の高さから 1500 m 上がるとほぼ岩）
+    const valley = Math.min(s.leg.from.elevation, s.leg.to.elevation);
+    const rocky = s.leg.terrain.length ? Math.min(0.85, Math.max(0, (groundElevation(s) - valley - 300) / 1500)) : 0;
+    this.rock.visible = rocky > 0.02;
+    this.rock.material.opacity = rocky;
 
     // 空と光：時刻に合わせて夕焼けから夜へ
     const sky = skyAt(s);
@@ -579,6 +594,8 @@ class WeatherLayer {
   private built: LegWeather | null = null;
   private cloudMat = lambert(0xe9ecef, { transparent: true, opacity: 0.93 });
   private cbMat = lambert(0x5b6170);
+  private rockMat = lambert(0x8a847c);
+  private snowMat = lambert(0xf4f6f8);
   private curtainMat = new THREE.MeshLambertMaterial({ color: 0x8e9aa8, transparent: true, opacity: 0.22, depthWrite: false });
   private rainGeo = new THREE.BufferGeometry();
   private rainPos: Float32Array;
@@ -606,11 +623,13 @@ class WeatherLayer {
   }
 
   /** 天気が変わったら（区間が変わったら）作り直す */
-  private build(w: LegWeather) {
+  private build(w: LegWeather, leg: Leg) {
     this.built = w;
     for (const c of [...this.root.children]) this.root.remove(c);
     const yAt = (alt: number) => 6 + alt * 0.075;
     const puff = new THREE.IcosahedronGeometry(1, 1);
+
+    this.buildRidges(w, leg);
 
     // 雲の層：ふくらんだ塊をたくさん並べる
     for (const c of w.clouds) {
@@ -668,8 +687,57 @@ class WeatherLayer {
     }
   }
 
+  /**
+   * 山の尾根：コースを横切る山なみとして、峰をたくさん並べる。
+   * コースの真上の峰は、その地点の地面の高さ（terrainAt）と同じ。15 km より外の峰は少し高いこともある（見た目だけ）。
+   * 凍る高さより上は雪をかぶせる。
+   */
+  private buildRidges(w: LegWeather, leg: Leg) {
+    if (!leg.terrain.length) return;
+    const STEP_ALONG = 3;
+    const STEP_LAT = 6;
+    const LAT = 72;
+    const base = Math.min(leg.from.elevation, leg.to.elevation) - 300;
+    const snowLine = w.freezingLevel - 300;
+    const cone = new THREE.ConeGeometry(1, 1, 5);
+    cone.translate(0, 0.5, 0);
+    const peaks: { x: number; z: number; h: number; r: number; rot: number }[] = [];
+    for (const r of leg.terrain)
+      for (let along = r.fromKm + STEP_ALONG / 2; along < r.toKm; along += STEP_ALONG)
+        for (let lat = -LAT; lat <= LAT; lat += STEP_LAT) {
+          // コースは尾根のいちばん低いところ（鞍部）を越える。少し離れた左右には、もっと高い峰がある
+          const k = Math.abs(lat) < STEP_LAT / 2 ? 1 : Math.abs(lat) < 15 ? rand(0.85, 1) : rand(0.85, 1.12);
+          const a = along + rand(-1, 1);
+          const h = terrainAt(leg, a) * k;
+          if (h - base < 200) continue;
+          peaks.push({ x: (lat + rand(-2, 2)) * KM, z: -a * KM, h, r: rand(3, 4.5) * KM, rot: rand(0, Math.PI) });
+        }
+    const rock = new THREE.InstancedMesh(cone, this.rockMat, peaks.length);
+    const caps = peaks.filter((p) => p.h > snowLine);
+    const snow = new THREE.InstancedMesh(cone, this.snowMat, Math.max(1, caps.length));
+    snow.count = caps.length;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    peaks.forEach((p, i) => {
+      const hy = (p.h - base) * 0.075;
+      q.setFromEuler(new THREE.Euler(0, p.rot, 0));
+      m.compose(new THREE.Vector3(p.x, base * 0.075, p.z), q, new THREE.Vector3(p.r, hy, p.r));
+      rock.setMatrixAt(i, m);
+    });
+    caps.forEach((p, i) => {
+      // 雪は峰の上の部分だけ。円すいの相似形なので、高さの割合で半径も縮める
+      const total = (p.h - base) * 0.075;
+      const cap = (p.h - snowLine) * 0.075;
+      const ratio = cap / total;
+      q.setFromEuler(new THREE.Euler(0, p.rot, 0));
+      m.compose(new THREE.Vector3(p.x, p.h * 0.075 - cap + 0.3, p.z), q, new THREE.Vector3(p.r * ratio * 1.04, cap, p.r * ratio * 1.04));
+      snow.setMatrixAt(i, m);
+    });
+    this.root.add(rock, snow);
+  }
+
   update(s: FlightState, realDt: number, running: boolean, cam: THREE.Vector3) {
-    if (this.built !== s.weather) this.build(s.weather);
+    if (this.built !== s.weather) this.build(s.weather, s.leg);
     const h = s.returning ? -1 : 1;
     const ground = groundElevation(s);
     this.root.scale.set(h, 1, h);

@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { RESERVE_FUEL_L } from "../src/config";
-import { COURSES, KAMOME, OWADATSUMI, TSURANARI } from "../src/data/courses";
+import { MAX_ALTITUDE, RESERVE_FUEL_L } from "../src/config";
+import { COURSES, KAMOME, OWADATSUMI, SHIROGANE, TSURANARI } from "../src/data/courses";
 import { clearSkies, isLand, legBetween, seaKm, shortestPath, WORLD } from "../src/data/world";
 import { canRecoverWithSpare, startCampaign } from "../src/game/campaign";
 import { evaluateFlight, overSea, terrainAt } from "../src/game/flight";
+import { recommendSetup } from "../src/game/recommend";
+import { climbAltitudeFactor, computePerformance, takeoffDistance, totalWeight } from "../src/model/physics";
+import { surfaceTemp } from "../src/model/weather";
 import type { World } from "../src/model/types";
 import { flyLeg, makeFlight, makeSetup } from "./helpers";
 
@@ -98,5 +101,69 @@ describe("コース（海峡・諸島・大洋）", () => {
     expect(evaluateFlight(f).detail).toContain("着水");
     f.distanceFlown = 2; // 岬の上ならまだ畑に降りられる
     expect(canRecoverWithSpare(c, f)).toBe(true);
+  });
+});
+
+describe("しろがね山脈を越える（山越えコース）", () => {
+  const W = SHIROGANE;
+  const ridgeOf = (a: string, b: string) => Math.max(0, ...legBetween(W, a, b).terrain.map((r) => r.height));
+
+  it("海はなく、目的地へのどの道も山を越える。いちばん高い山は 3000 m を超えるが、高度の上限より低い", () => {
+    expect(W.land).toBeUndefined();
+    for (const e of W.edges) {
+      expect(legBetween(W, e.a, e.b).sea).toEqual([]);
+      // すすめの巡航高度なら、その道の山を越えられる
+      expect(e.cruiseAltitude, `${e.a}-${e.b}`).toBeGreaterThan(ridgeOf(e.a, e.b));
+      expect(e.cruiseAltitude).toBeLessThanOrEqual(MAX_ALTITUDE);
+    }
+    const into = W.edges.filter((e) => e.a === W.goalId || e.b === W.goalId);
+    for (const e of into) expect(ridgeOf(e.a, e.b), `${e.a}-${e.b}`).toBeGreaterThanOrEqual(1800);
+    const highest = Math.max(...W.edges.map((e) => ridgeOf(e.a, e.b)));
+    expect(highest).toBeGreaterThan(3000);
+    expect(highest).toBeLessThan(MAX_ALTITUDE);
+  });
+
+  it("高いほど空気が薄く、上昇率が落ちる（1000 m までは変わらず、3000 m で半分）", () => {
+    expect(climbAltitudeFactor(0)).toBe(1);
+    expect(climbAltitudeFactor(1000)).toBe(1);
+    expect(climbAltitudeFactor(3000)).toBeCloseTo(0.5);
+    expect(climbAltitudeFactor(MAX_ALTITUDE)).toBeLessThan(0.4);
+    const climb = (altitude: number) =>
+      computePerformance({
+        pitch: 2, throttle: 1, mixture: 40, altitude, propEdge: 100, engineHealth: 100,
+        carbIcePenalty: 1, headwindKmh: 0, fuelRemaining: 50, phase: "climb",
+      }).climbRate;
+    expect(climb(3000) / climb(500)).toBeLessThan(0.6);
+  });
+
+  it("かざこし峠：上昇型なら越えられるが、巡航型で満タンだと上昇が間に合わず山にぶつかる", () => {
+    const leg = legBetween(clearSkies(W), "tanima", "kougen");
+    const winds = legBetween(W, "tanima", "kougen").weather.winds;
+    const climber = flyLeg(makeFlight({ leg, pitch: 2, fuel: 40, departureMin: 8 * 60, weather: { winds } }), 0.6);
+    expect(climber.status).toBe("arrived");
+    const heavy = flyLeg(makeFlight({ leg, pitch: 5, fuel: 80, departureMin: 8 * 60, weather: { winds } }), 0.6);
+    expect(heavy.status).toBe("terrain");
+    expect(heavy.distanceFlown).toBeLessThan(30);
+  });
+
+  it("こうげん（標高 1700 m）は空気が薄く、ふもとより飛び立つのに長い距離がいる", () => {
+    const susono = W.fields.find((f) => f.id === "susono")!;
+    const kougen = W.fields.find((f) => f.id === "kougen")!;
+    const at = (f: typeof kougen, pitch: 1 | 3 | 5, fuel: number) => takeoffDistance(pitch, f.elevation, surfaceTemp(f, 10 * 60), totalWeight(fuel, 8));
+    expect(at(kougen, 3, 40) / at(susono, 3, 40)).toBeGreaterThan(1.3);
+    // 巡航型で多めに積むと飛び立てない。上昇型なら満タンでも飛び立てる
+    expect(at(kougen, 5, 60)).toBeGreaterThan(kougen.runwayLength);
+    expect(at(kougen, 1, 80)).toBeLessThanOrEqual(kougen.runwayLength);
+  });
+
+  it("整備士のおすすめは、どの道でも上昇型寄り", () => {
+    for (const dest of ["tanima", "asahi", "hikune"]) expect(recommendSetup(W, dest).pitch, dest).toBeLessThanOrEqual(2);
+  });
+
+  it("峰をまっすぐ越える直行は、満タンなら届くが、半分では山の向こうまで届かない", () => {
+    const leg = legBetween(clearSkies(W), "susono", "asahi");
+    const winds = legBetween(W, "susono", "asahi").weather.winds;
+    expect(flyLeg(makeFlight({ leg, pitch: 2, fuel: 80, departureMin: 7 * 60, weather: { winds } }), 0.6).status).toBe("arrived");
+    expect(flyLeg(makeFlight({ leg, pitch: 2, fuel: 40, departureMin: 7 * 60, weather: { winds } }), 0.6).status).toBe("fuelOut");
   });
 });

@@ -1,9 +1,10 @@
-// コース：最初に選ぶ旅の舞台。陸路では行けない、架空の海峡・諸島・大洋を飛びこえる。
+// コース：最初に選ぶ旅の舞台。陸路では行けない、架空の海峡・諸島・大洋と、高い山脈を飛びこえる。
 // どれも史実の挑戦をもとにしているが、地名と地形は架空。
 //
 //   かもめ海峡   … 1909年 ブレリオの英仏海峡横断（短い海越え。霧と横風）
 //   つらなり諸島 … 1919年 NC-4 の大西洋横断（島から島へ、何日もかけて）
 //   おおわだつみ … 1919年 アルコックとブラウン・1927年 リンドバーグの無着陸横断（長い海の上を一気に）
+//   しろがね山脈 … 1910年 チャベスのアルプス越え・1918年 ゴドイのアンデス越え（海はなく、高い山なみ）
 //
 // 天気のひな形と山の位置は world.ts と同じく、道の a → b の向きで書く。
 // 海の上かどうかは、陸地の形（land）から自動で決まる。
@@ -814,7 +815,272 @@ export const OWADATSUMI: World = {
   ],
 };
 
+// =====================================================================
+// 4. しろがね山脈を越える（海はない。3000 m を超える山なみ）
+// =====================================================================
+const SHIROGANE_FIELDS: Waypoint[] = [
+  {
+    id: "susono",
+    name: "すその飛行場",
+    elevation: 350,
+    runwayLength: 800,
+    surface: "paved",
+    hasRepairShop: true,
+    humidity: 62,
+    temperature: 26,
+    dewPoint: 14,
+    description: "山脈のふもとの町。格納庫と整備場がある。西の空に、雪をかぶった山なみが見える。",
+    x: 0,
+    y: 0,
+    labelSide: "left",
+  },
+  {
+    id: "tanima",
+    name: "たにま飛行場",
+    elevation: 950,
+    runwayLength: 600,
+    surface: "unpaved",
+    hasRepairShop: false,
+    humidity: 78,
+    temperature: 23,
+    dewPoint: 15,
+    description: "谷の奥の村の草地。整備場はない。ここを出るとすぐ峠の上りで、重いと上昇が間に合わない。",
+    x: 50,
+    y: 125,
+    labelSide: "right",
+  },
+  {
+    id: "kougen",
+    name: "こうげん飛行場",
+    elevation: 1700,
+    runwayLength: 720,
+    surface: "unpaved",
+    hasRepairShop: true,
+    humidity: 45,
+    temperature: 18,
+    dewPoint: 5,
+    description: "峠を越えた先の高原の村。小さな整備小屋がある。空気が薄く、飛び立つのに長い距離がいる。",
+    x: 95,
+    y: 240,
+    labelSide: "right",
+  },
+  {
+    id: "hikune",
+    name: "ひくね飛行場",
+    elevation: 450,
+    runwayLength: 700,
+    surface: "paved",
+    hasRepairShop: true,
+    humidity: 70,
+    temperature: 25,
+    dewPoint: 16,
+    description: "山脈の南のはしの町。整備場がある。ここから回りこめば、山はいちばん低い。",
+    x: -170,
+    y: 130,
+    labelSide: "left",
+  },
+  {
+    id: "asahi",
+    name: "あさひ飛行場",
+    elevation: 650,
+    runwayLength: 750,
+    surface: "paved",
+    hasRepairShop: true,
+    humidity: 60,
+    temperature: 22,
+    dewPoint: 12,
+    description: "山脈の向こう側の町。山を越えきったゴール。",
+    x: 40,
+    y: 330,
+    labelSide: "left",
+  },
+];
+
+const SHIROGANE_EDGES: Edge[] = [
+  {
+    a: "susono",
+    b: "tanima",
+    cruiseAltitude: 1900,
+    note: "川をさかのぼって谷の奥へ。前山を越える。午後は谷を吹き上がる風で揺れる。",
+    terrain: [{ fromKm: 55, toKm: 100, height: 1500, name: "前山" }],
+    weather: {
+      winds: winds(20, [10, 15, 25, 35]),
+      freezingLevel: 3400,
+      features: [
+        {
+          id: "st-thermal",
+          kind: "turbulence",
+          prob: { morning: 0.2, afternoon: 0.6 },
+          turbulence: { fromKm: 40, toKm: 130, lateralKm: 0, halfWidthKm: 30, intensity: 1 },
+        },
+        {
+          id: "st-valleyfog",
+          kind: "cloud",
+          prob: { morning: 0.4, afternoon: 0.1 },
+          cloud: { fromKm: 105, toKm: 135, lateralKm: 0, halfWidthKm: 20, base: 900, top: 1300 },
+        },
+      ],
+    },
+  },
+  {
+    a: "tanima",
+    b: "kougen",
+    cruiseAltitude: 3300,
+    note: "かざこし峠を越える。谷を出てすぐ急な上り。峠に雲がかかると下をくぐれない。午後は雲と山の波で荒れる。",
+    terrain: [{ fromKm: 3, toKm: 55, height: 3000, name: "かざこし峠" }],
+    weather: {
+      winds: winds(30, [10, 20, 30, 40]),
+      freezingLevel: 3200,
+      features: [
+        {
+          id: "tk-cap",
+          kind: "cloud",
+          prob: { morning: 0.3, afternoon: 0.7 },
+          cloud: { fromKm: 15, toKm: 45, lateralKm: 0, halfWidthKm: 20, base: 2800, top: 4200 },
+        },
+        {
+          id: "tk-wave",
+          kind: "turbulence",
+          prob: { morning: 0.4, afternoon: 0.7 },
+          turbulence: { fromKm: 35, toKm: 100, lateralKm: 0, halfWidthKm: 35, intensity: 2 },
+        },
+        {
+          id: "tk-cb",
+          kind: "cb",
+          prob: { morning: 0.1, afternoon: 0.4 },
+          cb: { alongKm: 50, lateralKm: 10, radiusKm: 5 },
+        },
+      ],
+    },
+  },
+  {
+    a: "kougen",
+    b: "asahi",
+    cruiseAltitude: 2600,
+    note: "高原から東の尾根を越えて、山の向こうの町へ下る。追い風。",
+    terrain: [{ fromKm: 20, toKm: 60, height: 2300, name: "東の尾根" }],
+    weather: {
+      winds: winds(200, [5, 10, 20, 30]),
+      freezingLevel: 3200,
+      features: [
+        {
+          id: "ka-wave",
+          kind: "turbulence",
+          prob: { morning: 0.3, afternoon: 0.6 },
+          turbulence: { fromKm: 45, toKm: 90, lateralKm: 0, halfWidthKm: 30, intensity: 1 },
+        },
+        {
+          id: "ka-shower",
+          kind: "rain",
+          prob: { morning: 0.2, afternoon: 0.4 },
+          cloud: { fromKm: 60, toKm: 95, lateralKm: 0, halfWidthKm: 15, base: 1800, top: 3200 },
+          rain: { fromKm: 65, toKm: 90, lateralKm: 0, halfWidthKm: 12, intensity: 1 },
+        },
+      ],
+    },
+  },
+  {
+    a: "susono",
+    b: "asahi",
+    cruiseAltitude: 3500,
+    note: "しろがね岳のすぐ横を、まっすぐ越える。高い空は向かい風が強く、峰には雲がかかりやすい。凍る高さより上を飛ぶ。",
+    terrain: [
+      { fromKm: 50, toKm: 95, height: 1600, name: "前山" },
+      { fromKm: 150, toKm: 235, height: 3300, name: "しろがね岳" },
+    ],
+    weather: {
+      winds: winds(15, [10, 20, 30, 40]),
+      freezingLevel: 2800,
+      features: [
+        {
+          id: "sa-cap",
+          kind: "cloud",
+          prob: { morning: 0.4, afternoon: 0.8 },
+          cloud: { fromKm: 165, toKm: 225, lateralKm: 0, halfWidthKm: 25, base: 2800, top: 4500 },
+        },
+        {
+          id: "sa-wave",
+          kind: "turbulence",
+          prob: { morning: 0.5, afternoon: 0.8 },
+          turbulence: { fromKm: 200, toKm: 290, lateralKm: 0, halfWidthKm: 40, intensity: 2 },
+        },
+        {
+          id: "sa-cb",
+          kind: "cb",
+          prob: { morning: 0.1, afternoon: 0.5 },
+          cb: { alongKm: 190, lateralKm: -12, radiusKm: 6 },
+        },
+      ],
+    },
+  },
+  {
+    a: "susono",
+    b: "hikune",
+    cruiseAltitude: 1500,
+    note: "山脈のすそを南西へ。山はないが、横風で、ときどき雨。",
+    terrain: [],
+    weather: {
+      winds: winds(80, [15, 20, 25, 30]),
+      freezingLevel: 3600,
+      features: [
+        {
+          id: "sh-shower",
+          kind: "rain",
+          prob: { morning: 0.3, afternoon: 0.4 },
+          cloud: { fromKm: 90, toKm: 150, lateralKm: 0, halfWidthKm: 20, base: 1000, top: 2600 },
+          rain: { fromKm: 95, toKm: 145, lateralKm: 0, halfWidthKm: 16, intensity: 1 },
+        },
+      ],
+    },
+  },
+  {
+    a: "hikune",
+    b: "asahi",
+    cruiseAltitude: 2200,
+    note: "南のはしの低い山を回りこむ。山は低いが遠く、ずっと向かい風。途中に前線。",
+    terrain: [{ fromKm: 90, toKm: 170, height: 1800, name: "南の山なみ" }],
+    weather: {
+      winds: winds(0, [15, 20, 30, 40]),
+      freezingLevel: 3200,
+      features: [
+        {
+          id: "ha-front",
+          kind: "rain",
+          prob: { morning: 0.5, afternoon: 0.5 },
+          cloud: { fromKm: 180, toKm: 250, lateralKm: 0, halfWidthKm: 30, base: 1400, top: 3000 },
+          rain: { fromKm: 190, toKm: 240, lateralKm: 0, halfWidthKm: 25, intensity: 1 },
+        },
+        {
+          id: "ha-wave",
+          kind: "turbulence",
+          prob: { morning: 0.3, afternoon: 0.5 },
+          turbulence: { fromKm: 140, toKm: 200, lateralKm: 0, halfWidthKm: 30, intensity: 1 },
+        },
+      ],
+    },
+  },
+];
+
+export const SHIROGANE: World = {
+  id: "shirogane",
+  title: "しろがね山脈を越える",
+  name: "すその → あさひ",
+  description:
+    "海はないが、3000 m を超える山なみが行く手をふさぐ。高いほど空気が薄く、上昇は鈍る。峰の雲は午後に育つ。まっすぐ峰を越えるか、峠を越えるか、南へ回りこむか。",
+  history:
+    "1910年、チャベスは小さな単葉機でアルプスの峠を越えた。寒さと強い風に耐えて越えきったが、着陸の直前に翼が折れた。1918年、ゴドイはアンデス山脈のいちばん高いあたりを越えた。山の天気は朝のうちが穏やかだ。",
+  level: 2,
+  fields: SHIROGANE_FIELDS,
+  edges: SHIROGANE_EDGES,
+  startId: "susono",
+  goalId: "asahi",
+  fuelCapacityL: 80,
+  startMin: 7 * 60,
+  sunsetMin: 18 * 60,
+  planSpeedKmh: 105,
+};
+
 /** 最初に選べるコース（並び順のまま画面に出す） */
-export const COURSES: World[] = [KAMOME, TSURANARI, OWADATSUMI, WORLD];
+export const COURSES: World[] = [KAMOME, TSURANARI, OWADATSUMI, SHIROGANE, WORLD];
 
 export const courseById = (id: string): World => COURSES.find((c) => c.id === id) ?? COURSES[0];

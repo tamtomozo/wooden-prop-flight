@@ -14,6 +14,12 @@ export const THROTTLE_MIN = 0.2;
 // ---- 上昇と降下 ----
 /** 基準の上昇率 m/分（全開・ピッチ3・空の重さ） */
 export const BASE_CLIMB_RATE = 250;
+/**
+ * 高いほど空気が薄く、上昇率が落ちる。CLIMB_FADE_FROM m から落ち始め、CLIMB_CEILING m で 0 になる（上昇限度）。
+ * 高度の上限（MAX_ALTITUDE）あたりでは、海面の 3分の1 ほどしか上がらない。
+ */
+export const CLIMB_FADE_FROM = 1000;
+export const CLIMB_CEILING = 5000;
 /** 上昇中は速度が落ちる */
 export const CLIMB_SPEED_FACTOR = 0.75;
 /** 降下率 m/分 */

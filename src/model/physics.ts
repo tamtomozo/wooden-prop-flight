@@ -4,6 +4,8 @@ import {
   BASE_CLIMB_RATE,
   BASE_SPEED,
   BASE_TAKEOFF,
+  CLIMB_CEILING,
+  CLIMB_FADE_FROM,
   CLIMB_SPEED_FACTOR,
   DESCENT_SPEED_BONUS,
   EMPTY_WEIGHT,
@@ -177,14 +179,20 @@ export function computePerformance(i: FlightInputs): Performance {
   const rpm = i.throttle * i.carbIcePenalty * (pf.staticRPM + airspeed * pf.rpmPerKmh);
   const overspeedDamagePerMin = rpm > REDLINE_RPM ? (rpm - REDLINE_RPM) / 50 : 0;
 
-  // 上昇率：ピッチ（上昇型ほど強い）・出力・重さで決まる
+  // 上昇率：ピッチ（上昇型ほど強い）・出力・重さ・高さ（空気の薄さ）で決まる
   const climbRate =
-    phase === "climb" ? (BASE_CLIMB_RATE * pf.climbFactor * powerFactor * propEfficiency) / (i.weightRatio ?? 1) : 0;
+    phase === "climb"
+      ? (BASE_CLIMB_RATE * pf.climbFactor * powerFactor * propEfficiency * climbAltitudeFactor(i.altitude)) / (i.weightRatio ?? 1)
+      : 0;
 
   const egt = exhaustTemp(i.mixture, i.altitude, i.throttle);
 
   return { airspeed, groundSpeed, rpm, fuelBurn, rangeKm, mixture: mix, egt, climbRate, overspeedDamagePerMin };
 }
+
+/** 高さによる上昇率の倍率。高いほど空気が薄く、上がりにくい */
+export const climbAltitudeFactor = (altitude: number) =>
+  segment(altitude, CLIMB_FADE_FROM, CLIMB_CEILING, 1, 0);
 
 // ---- 4.5 重さと離陸距離 ----
 export function totalWeight(fuelL: number, equipmentKg: number): number {
