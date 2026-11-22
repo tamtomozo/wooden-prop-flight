@@ -132,7 +132,6 @@ function profileSvg(i: LegProfileInput): string {
   const kmStep = D > 150 ? 50 : 25;
   const kmTicks: string[] = [];
   for (let k = 0; k <= D; k += kmStep) kmTicks.push(`<text class="lp-t" x="${sx(k)}" y="${Y_BASE + 12}" text-anchor="middle">${k} km</text>`);
-  if (D % kmStep) kmTicks.push(`<text class="lp-t" x="${sx(D)}" y="${Y_BASE + 12}" text-anchor="middle">${D} km</text>`);
 
   // 凍結高度
   const frz =

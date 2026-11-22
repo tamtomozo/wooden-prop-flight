@@ -69,8 +69,8 @@ export const FORCED_LANDING_MIN = 180;
 // ---- 判定と時間 ----
 /** 予備燃料の目安（L）。最良燃費の巡航で約30分ぶん */
 export const RESERVE_FUEL_L = 8;
-/** 現実の1秒で進むゲーム内の分数（倍速ボタンで掛け算される） */
-export const GAME_MINUTES_PER_SECOND = 2;
+/** 現実の1秒で進むゲーム内の分数（倍速ボタンで掛け算される）。2 だと速すぎたので、現実の時間を1.5倍にした */
+export const GAME_MINUTES_PER_SECOND = 2 / 1.5;
 /** シミュレーションの1刻み（ゲーム内の分） */
 export const SIM_SUBSTEP_MIN = 0.25;
 

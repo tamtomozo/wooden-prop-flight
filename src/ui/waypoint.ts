@@ -37,7 +37,7 @@ import { equipmentKg } from "../data/equipment";
 import { isHasty } from "../model/pilot";
 import type { Forecast, ForecastItem } from "../model/types";
 import { fogChance, headwindAt, spreadAt } from "../model/weather";
-import { fmtDuration, mechanicLine, openDialog, pilotTable, setActions } from "./dialog";
+import { fmtDuration, mechanicLine, openDialog, pilotTable, setActions, tabsHtml } from "./dialog";
 import { pilotDiagramHtml } from "./pilotDiagram";
 import { inspectionHtml } from "./inspection";
 import { legProfileHtml } from "./legProfile";
@@ -51,6 +51,9 @@ export interface ArrivalInfo {
   fuelUsed: number;
 }
 
+/** 経由地の見出しごとのタブ */
+type WaypointTab = "check" | "pilot" | "work" | "fuel" | "dest" | "leg";
+
 export interface WaypointOptions {
   arrival?: ArrivalInfo;
   details: () => boolean;
@@ -60,6 +63,8 @@ export interface WaypointOptions {
 export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
   let fuelTarget = Math.round(c.condition.fuelRemaining);
   let arrival = opts.arrival;
+  /** 今開いているタブ */
+  let tab: WaypointTab = "check";
   render(false);
 
   function render(keepScroll = true) {
@@ -101,44 +106,21 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
           : ""
       }
 
-      <h3>機体の点検 <label class="toggle small"><input type="checkbox" data-details ${d ? "checked" : ""} /> 数値</label></h3>
-      ${notice ? `<div class="notice">点検の通知：${notice}</div>` : ""}
-      ${inspectionHtml(a, { details: d, plain, haste: c.pilot.haste })}
-      <h3>操縦者</h3>
-      ${plain ? pilotTable(c.pilot, d, { plain, haste: c.pilot.haste }) : pilotDiagramHtml(c.pilot, d, c.pilot.haste)}
       ${mechanicLine(adviceAtField(c))}
 
-      <h3>整備と準備</h3>
-      <div class="actions">
-        ${btn("retorque", "ボルトを締め直す", retorqueInfo(c), c.setup.equipment.toolKit ? "・工具セット" : "")}
-        ${btn("edge", "前縁を補修する", edgeRepairInfo(c))}
-        ${btn("engine", "エンジンを整備する", engineServiceInfo(c))}
-        ${btn("frame", "機体を修理する", airframeRepairInfo(c))}
-        ${btn("swap", "予備のプロペラに交換", propSwapInfo(c))}
-        ${btn("wait", "天気を待つ", waitInfo(c), `・焦り −${HASTE_RELIEF}（勇気ある撤退）・霧が晴れる／午後は天気が変わる`)}
-        ${btn("rest", "一晩泊まる（翌朝 8:00）", restInfo(c), `翌朝まで休む・疲労 −${FATIGUE_REST}`)}
-      </div>
+      ${tabsHtml<WaypointTab>(
+        [
+          { id: "check", label: "機体の点検", sub: notice ? "通知あり" : undefined, todo: !!notice },
+          { id: "pilot", label: "操縦者" },
+          { id: "work", label: "整備と準備" },
+          { id: "fuel", label: "給油", sub: `${a.fuelRemaining.toFixed(0)} L` },
+          { id: "dest", label: "次の行き先", sub: leg ? leg.to.name : "まだ", todo: !leg },
+          { id: "leg", label: "次の区間", sub: leg ? "予報" : undefined },
+        ],
+        tab,
+      )}
+      <section class="tab-panel" role="tabpanel">${panelHtml()}</section>
 
-      <h3>給油</h3>
-      <div class="fuel-row">
-        <input type="range" min="0" max="${c.world.fuelCapacityL}" step="1" value="${fuelTarget}" data-fuel />
-        <span>今 ${a.fuelRemaining.toFixed(0)} L → <b>${fuelTarget} L</b>
-          ${fuelTarget < a.fuelRemaining - 0.5 ? "（抜く）" : ""}
-          ・離陸距離 <b class="${tcTarget.ok ? "" : "ng-text"}">${Math.round(tcTarget.distance)} m</b> / ${tcTarget.runway} m</span>
-        <button data-act="fuel" ${fuelInfo.ok ? "" : "disabled"}>この量にする</button>
-      </div>
-
-      <h3>次の行き先 <small>地図の飛行場をクリック</small></h3>
-      ${routePlanHtml(c.world, {
-        from: c.location,
-        destination: c.destination,
-        nowAbs: absNow(c),
-        flown: flownEdges(c),
-        pitch: c.setup.pitch,
-        equipmentKg: equipmentKg(c.setup.equipment),
-      })}
-
-      ${nextLegHtml(c)}
       <p class="small">今の重さ ${Math.round(tc.weight)} kg・気温 ${tc.temperature.toFixed(0)}℃・離陸距離 ${Math.round(tc.distance)} m / 滑走路 ${tc.runway} m ${tc.ok ? "○" : "×（燃料を減らすか、涼しい時間を待つ）"}</p>
       ${problems.length ? `<p class="problems">${problems.join("・")}</p>` : ""}
       <button class="primary" data-act="depart" ${problems.length ? "disabled" : ""}>${leg ? `${leg.to.name}へ出発する` : "行き先を選ぶ"}</button>`,
@@ -146,16 +128,60 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
     );
 
     const root = document.querySelector<HTMLElement>("#dialog")!;
-    root.querySelector<HTMLInputElement>("[data-fuel]")!.addEventListener("input", (e) => {
+    root.querySelector<HTMLInputElement>("[data-fuel]")?.addEventListener("input", (e) => {
       fuelTarget = Number((e.target as HTMLInputElement).value);
       render();
     });
-    root.querySelector<HTMLInputElement>("[data-details]")!.addEventListener("change", (e) => {
+    root.querySelector<HTMLInputElement>("[data-details]")?.addEventListener("change", (e) => {
       const box = document.querySelector<HTMLInputElement>("#details")!;
       box.checked = (e.target as HTMLInputElement).checked;
       box.dispatchEvent(new Event("change"));
       render();
     });
+
+    /** 選んでいるタブの中身 */
+    function panelHtml(): string {
+      const detailsToggle = `<p class="tab-tools"><label class="toggle small"><input type="checkbox" data-details ${d ? "checked" : ""} /> 数値</label></p>`;
+      switch (tab) {
+        case "check":
+          return `${detailsToggle}
+          ${notice ? `<div class="notice">点検の通知：${notice}</div>` : ""}
+          ${inspectionHtml(a, { details: d, plain, haste: c.pilot.haste })}`;
+        case "pilot":
+          return `${detailsToggle}
+          ${plain ? pilotTable(c.pilot, d, { plain, haste: c.pilot.haste }) : pilotDiagramHtml(c.pilot, d, c.pilot.haste)}`;
+        case "work":
+          return `<div class="actions">
+            ${btn("retorque", "ボルトを締め直す", retorqueInfo(c), c.setup.equipment.toolKit ? "・工具セット" : "")}
+            ${btn("edge", "前縁を補修する", edgeRepairInfo(c))}
+            ${btn("engine", "エンジンを整備する", engineServiceInfo(c))}
+            ${btn("frame", "機体を修理する", airframeRepairInfo(c))}
+            ${btn("swap", "予備のプロペラに交換", propSwapInfo(c))}
+            ${btn("wait", "天気を待つ", waitInfo(c), `・焦り −${HASTE_RELIEF}（勇気ある撤退）・霧が晴れる／午後は天気が変わる`)}
+            ${btn("rest", "一晩泊まる（翌朝 8:00）", restInfo(c), `翌朝まで休む・疲労 −${FATIGUE_REST}`)}
+          </div>`;
+        case "fuel":
+          return `<div class="fuel-row">
+            <input type="range" min="0" max="${c.world.fuelCapacityL}" step="1" value="${fuelTarget}" data-fuel />
+            <span>今 ${a.fuelRemaining.toFixed(0)} L → <b>${fuelTarget} L</b>
+              ${fuelTarget < a.fuelRemaining - 0.5 ? "（抜く）" : ""}
+              ・離陸距離 <b class="${tcTarget.ok ? "" : "ng-text"}">${Math.round(tcTarget.distance)} m</b> / ${tcTarget.runway} m</span>
+            <button data-act="fuel" ${fuelInfo.ok ? "" : "disabled"}>この量にする</button>
+          </div>`;
+        case "dest":
+          return `<p class="small">地図の飛行場をクリックして選ぶ</p>
+          ${routePlanHtml(c.world, {
+            from: c.location,
+            destination: c.destination,
+            nowAbs: absNow(c),
+            flown: flownEdges(c),
+            pitch: c.setup.pitch,
+            equipmentKg: equipmentKg(c.setup.equipment),
+          })}`;
+        case "leg":
+          return nextLegHtml(c) || `<p class="small">「次の行き先」で飛行場を選ぶと、区間の断面図と予報が出る。</p>`;
+      }
+    }
   }
 
   const torqueThen = (heading: string, apply: (r: Parameters<typeof retorque>[1]) => void) =>
@@ -169,6 +195,10 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
     });
 
   setActions({
+    tab: (el) => {
+      tab = el.dataset.v as WaypointTab;
+      render();
+    },
     retorque: () => torqueThen("ボルトの締め直し", (r) => retorque(c, r)),
     swap: () => torqueThen("予備のプロペラに交換", (r) => swapProp(c, r)),
     edge: () => {

@@ -5,7 +5,7 @@ import { field } from "../data/world";
 import { setupProblems, startCampaign, suggestedDestination } from "../game/campaign";
 import { recommendSetup, type Recommendation } from "../game/recommend";
 import type { Difficulty, Equipment, PitchLevel, Setup, TorqueResult, World } from "../model/types";
-import { mechanicLine, openDialog, setActions } from "./dialog";
+import { mechanicLine, openDialog, setActions, tabsHtml } from "./dialog";
 import { equipmentDiagramHtml } from "./equipmentDiagram";
 import { fuelDiagramHtml } from "./fuelDiagram";
 import { pitchDiagramHtml } from "./pitchDiagram";
@@ -15,6 +15,18 @@ import { torqueDiagramHtml } from "./torqueDiagram";
 import { nextLegHtml } from "./waypoint";
 
 const PITCH_NAMES: Record<PitchLevel, string> = { 1: "上昇型", 2: "やや上昇", 3: "中間", 4: "やや巡航", 5: "巡航型" };
+
+/** 「最初の行き先」から下を、見出しごとのタブに分ける */
+type HangarTab = "dest" | "leg" | "pitch" | "fuel" | "gear" | "torque";
+const TABS: HangarTab[] = ["dest", "leg", "pitch", "fuel", "gear", "torque"];
+const TAB_LABELS: Record<HangarTab, string> = {
+  dest: "最初の行き先",
+  leg: "最初の区間",
+  pitch: "プロペラの性格",
+  fuel: "燃料の量",
+  gear: "装備",
+  torque: "ボルトの締め付け",
+};
 
 interface HangarState {
   difficulty: Difficulty;
@@ -56,6 +68,10 @@ export function showHangar(
     st.pitch === rec.pitch &&
     st.fuelPercent === rec.fuelPercent &&
     JSON.stringify(st.equipment) === JSON.stringify(rec.equipment);
+  /** 今開いているタブ */
+  let tab: HangarTab = "dest";
+  /** おすすめの理由を開いているか（描き直しても開いたままにする） */
+  let whyOpen = false;
   render(false);
 
   function render(keepScroll = true) {
@@ -93,85 +109,40 @@ export function showHangar(
         </ul>
       </details>
 
-      <section class="setup">
-        <h3>最初の行き先 <small>地図の飛行場をクリック</small></h3>
-        ${routePlanHtml(world, { from: world.startId, destination: st.destination, nowAbs: world.startMin, pitch: st.pitch, equipmentKg: eqKg })}
-        <details class="howto">
-          <summary>飛行場の一覧</summary>
-          <table class="route-table">
-            <tr><th>飛行場</th><th>滑走路</th><th>整備場</th><th>湿度</th></tr>
-            ${world.fields
-              .map(
-                (w) => `<tr><td>${w.name}<small>${w.description}</small></td><td>${w.runwayLength} m・${w.surface === "paved" ? "舗装" : "未舗装"}</td>
-                <td>${w.hasRepairShop ? "あり" : "なし"}</td><td>${w.humidity}%</td></tr>`,
-              )
-              .join("")}
-          </table>
-        </details>
-      </section>
-
-      <section class="setup leg-plan">
-        ${nextLegHtml(startCampaign(world, setupOf(), seed, st.difficulty, st.destination), (from, to) => `<h3>${from} → ${to} <small>最初の区間・今日の予報</small></h3>`)}
-      </section>
-
       <div class="recommend">
         <div class="recommend-row">
           <button class="primary" data-act="recommend">整備士のおすすめセッティングにする</button>
         </div>
         ${
           isRecommended()
-            ? `<div class="mechanic recommend-why"><span class="who">整備士</span><ul>${rec!.reasons.map((r) => `<li>${r}</li>`).join("")}</ul></div>`
+            ? `<details class="howto" data-why ${whyOpen ? "open" : ""}>
+                <summary>おすすめ内容</summary>
+                <div class="mechanic recommend-why"><span class="who">整備士</span><ul>${rec!.reasons.map((r) => `<li>${r}</li>`).join("")}</ul></div>
+              </details>`
             : ""
         }
       </div>
-      <section class="setup">
-        <h3>プロペラの性格（ピッチ）</h3>
-        ${mechanicLine("長い滑走路から出るなら巡航型でいける。山を越えるなら上昇型が安心だ。上昇型は回りやすいから、全開や降下では回転計に気をつけろ。")}
-        <div class="seg">${([1, 2, 3, 4, 5] as PitchLevel[])
-          .map((p) => `<button data-act="pitch" data-v="${p}" class="${p === st.pitch ? "on" : ""}">${p}<small>${PITCH_NAMES[p]}</small></button>`)
-          .join("")}</div>
-        ${pitchDiagramHtml(st.pitch)}
-      </section>
 
-      <section class="setup">
-        <h3>燃料の量</h3>
-        ${mechanicLine("暑い日の満タン離陸は、滑走路の長さを必ず確認しろ。経由地では、次に必要なぶんだけ積むのも手だ。")}
-        <div class="fuel-row">
-          <input type="range" min="0" max="100" step="5" value="${st.fuelPercent}" data-fuel />
-          <span><b>${fuelL.toFixed(0)} L</b>（${st.fuelPercent}%・${(fuelL * 0.72).toFixed(0)} kg）</span>
-        </div>
-        ${fuelDiagramHtml({
-          fuelL,
-          capacityL: world.fuelCapacityL,
-          equipmentKg: eqKg,
-          pitch: st.pitch,
-          fields: world.fields.filter((w) => w.id !== world.goalId),
-        })}
-      </section>
-
-      <section class="setup">
-        <h3>装備</h3>
-        ${mechanicLine("装備は重さとの相談だ。雨の多い旅なら前縁の保護、整備場のない道なら工具だ。")}
-        ${equipmentDiagramHtml(st.equipment)}
-      </section>
-
-      <section class="setup">
-        <h3>ボルトの締め付け</h3>
-        ${mechanicLine("ボルトを締め終えたら、出発できるぞ。これが出発前の最後の仕事だ。")}
-        ${
-          st.torque === null || st.torque === "under"
-            ? `<button class="torque-btn" data-act="torque">${st.torque ? "もう一度締める" : "ボルトを締める（ミニゲーム）"}</button>`
-            : ""
-        }
-        ${torqueDiagramHtml(st.torque)}
-      </section>
+      ${tabsHtml(
+        TABS.map((t) => ({
+          id: t,
+          label: TAB_LABELS[t],
+          sub: tabSub(t, fuelL, eqKg),
+          todo: t === "torque" && (st.torque === null || st.torque === "under"),
+        })),
+        tab,
+      )}
+      <section class="tab-panel" role="tabpanel">${panelHtml(fuelL, eqKg)}</section>
 
       ${problems.length ? `<p class="problems">${problems.join("・")}</p>` : ""}
       <button class="primary" data-act="depart" ${canDepart ? "" : "disabled"}>${start.name}から${field(world, st.destination).name}へ出発する</button>`,
       { wide: true, keepScroll },
     );
 
-    root.querySelector<HTMLInputElement>("[data-fuel]")!.addEventListener("input", (e) => {
+    root.querySelector<HTMLDetailsElement>("[data-why]")?.addEventListener("toggle", (e) => {
+      whyOpen = (e.target as HTMLDetailsElement).open;
+    });
+    root.querySelector<HTMLInputElement>("[data-fuel]")?.addEventListener("input", (e) => {
       st.fuelPercent = Number((e.target as HTMLInputElement).value);
       render();
     });
@@ -189,6 +160,80 @@ export function showHangar(
     );
   }
 
+  /** タブの見出しの下に出す、今の値 */
+  function tabSub(t: HangarTab, fuelL: number, eqKg: number): string {
+    switch (t) {
+      case "dest":
+        return field(world, st.destination).name;
+      case "leg":
+        return "今日の予報";
+      case "pitch":
+        return `${st.pitch} ${PITCH_NAMES[st.pitch]}`;
+      case "fuel":
+        return `${fuelL.toFixed(0)} L`;
+      case "gear":
+        return `${eqKg.toFixed(0)} kg`;
+      case "torque":
+        return st.torque === null ? "まだ" : st.torque === "under" ? "ゆるい" : "済み";
+    }
+  }
+
+  /** 選んでいるタブの中身 */
+  function panelHtml(fuelL: number, eqKg: number): string {
+    switch (tab) {
+      case "dest":
+        return `<p class="small">地図の飛行場をクリックして選ぶ</p>
+        ${routePlanHtml(world, { from: world.startId, destination: st.destination, nowAbs: world.startMin, pitch: st.pitch, equipmentKg: eqKg })}
+        <details class="howto">
+          <summary>飛行場の一覧</summary>
+          <table class="route-table">
+            <tr><th>飛行場</th><th>滑走路</th><th>整備場</th><th>湿度</th></tr>
+            ${world.fields
+              .map(
+                (w) => `<tr><td>${w.name}<small>${w.description}</small></td><td>${w.runwayLength} m・${w.surface === "paved" ? "舗装" : "未舗装"}</td>
+                <td>${w.hasRepairShop ? "あり" : "なし"}</td><td>${w.humidity}%</td></tr>`,
+              )
+              .join("")}
+          </table>
+        </details>`;
+      case "leg":
+        return `<div class="leg-plan">${nextLegHtml(
+          startCampaign(world, setupOf(), seed, st.difficulty, st.destination),
+          (from, to) => `<h3>${from} → ${to} <small>最初の区間・今日の予報</small></h3>`,
+        )}</div>`;
+      case "pitch":
+        return `${mechanicLine("長い滑走路から出るなら巡航型でいける。山を越えるなら上昇型が安心だ。上昇型は回りやすいから、全開や降下では回転計に気をつけろ。")}
+        <div class="seg">${([1, 2, 3, 4, 5] as PitchLevel[])
+          .map((p) => `<button data-act="pitch" data-v="${p}" class="${p === st.pitch ? "on" : ""}">${p}<small>${PITCH_NAMES[p]}</small></button>`)
+          .join("")}</div>
+        ${pitchDiagramHtml(st.pitch)}`;
+      case "fuel":
+        return `${mechanicLine("暑い日の満タン離陸は、滑走路の長さを必ず確認しろ。経由地では、次に必要なぶんだけ積むのも手だ。")}
+        <div class="fuel-row">
+          <input type="range" min="0" max="100" step="5" value="${st.fuelPercent}" data-fuel />
+          <span><b>${fuelL.toFixed(0)} L</b>（${st.fuelPercent}%・${(fuelL * 0.72).toFixed(0)} kg）</span>
+        </div>
+        ${fuelDiagramHtml({
+          fuelL,
+          capacityL: world.fuelCapacityL,
+          equipmentKg: eqKg,
+          pitch: st.pitch,
+          fields: world.fields.filter((w) => w.id !== world.goalId),
+        })}`;
+      case "gear":
+        return `${mechanicLine("装備は重さとの相談だ。雨の多い旅なら前縁の保護、整備場のない道なら工具だ。")}
+        ${equipmentDiagramHtml(st.equipment)}`;
+      case "torque":
+        return `${mechanicLine("ボルトを締め終えたら、出発できるぞ。これが出発前の最後の仕事だ。")}
+        ${
+          st.torque === null || st.torque === "under"
+            ? `<button class="torque-btn" data-act="torque">${st.torque ? "もう一度締める" : "ボルトを締める"}</button>`
+            : ""
+        }
+        ${torqueDiagramHtml(st.torque)}`;
+    }
+  }
+
   function setupOf(): Setup {
     return { pitch: st.pitch, fuelPercent: st.fuelPercent, torqueResult: st.torque ?? "ok", equipment: st.equipment };
   }
@@ -196,6 +241,10 @@ export function showHangar(
   setActions({
     difficulty: (el) => {
       st.difficulty = el.dataset.v as Difficulty;
+      render();
+    },
+    tab: (el) => {
+      tab = el.dataset.v as HangarTab;
       render();
     },
     pitch: (el) => {

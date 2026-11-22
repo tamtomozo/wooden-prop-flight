@@ -111,7 +111,6 @@ export function recommendSetup(w: World, destination: string, difficulty: Diffic
         plan.reason,
         ...gearReasons,
         dropSpare ? "予備のプロペラは重すぎて、短い滑走路から飛び立てなくなるので外した" : "",
-        "ボルトの締め付けだけは、自分の手で締めろ",
       ].filter(Boolean);
       return { pitch, fuelPercent: plan.fuelPercent, equipment, reasons };
     }

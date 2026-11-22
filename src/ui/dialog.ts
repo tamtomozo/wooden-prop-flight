@@ -32,6 +32,25 @@ export const fmtDuration = (min: number) => {
 export const mechanicLine = (text: string) =>
   `<p class="mechanic"><span class="who">整備士</span><span>${text}</span></p>`;
 
+export interface TabItem<T extends string> {
+  id: T;
+  label: string;
+  /** 見出しの下に小さく出す今の値 */
+  sub?: string;
+  /** まだ済んでいない・気をつけること（印をつける） */
+  todo?: boolean;
+}
+
+/** 見出しごとのタブ（ボタンは data-act="tab" data-v="id"） */
+export function tabsHtml<T extends string>(tabs: TabItem<T>[], current: T): string {
+  return `<div class="tabs" role="tablist">${tabs
+    .map(
+      (t) =>
+        `<button role="tab" data-act="tab" data-v="${t.id}" class="${t.id === current ? "on" : ""}${t.todo ? " todo" : ""}" aria-selected="${t.id === current}">${t.label}${t.sub ? `<small>${t.sub}</small>` : ""}</button>`,
+    )
+    .join("")}</div>`;
+}
+
 // ダイアログ内のボタンは data-act で振り分ける。リスナーは1つだけにして、画面ごとに中身を差し替える
 type Handlers = Record<string, (el: HTMLElement) => void>;
 let actions: Handlers = {};
