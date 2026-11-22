@@ -1,0 +1,608 @@
+:root {
+  --bg: #1b1f24;
+  --panel: #262b32;
+  --card: #2f353d;
+  --line: #424a55;
+  --text: #ecebe6;
+  --muted: #a3a8b0;
+  --wood: #b07a45;
+  --green: #4cc38a;
+  --yellow: #e8c547;
+  --red: #ef5a5a;
+  --blue: #5aa9ef;
+  --accent: #e8a35c;
+  font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+  color: var(--text);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); }
+button { font: inherit; }
+
+/* ---- 1画面のレイアウト：上の帯／景色（残りの高さ全部）／計器盤（横1段） ---- */
+#app {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 540px;
+  padding: 8px 12px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 14px;
+}
+.route { font-weight: 700; font-size: 0.98rem; }
+.route .arrow { color: var(--accent); margin: 0 6px; }
+.clock { font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+.clock strong { font-size: 1.15rem; margin-right: 8px; }
+.label { color: var(--muted); font-size: 0.75rem; }
+.buttons { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.buttons button, .dialog button {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 9px;
+  cursor: pointer;
+}
+.buttons button { font-size: 0.85rem; }
+.buttons button.on { background: var(--accent); color: #1b1f24; border-color: var(--accent); }
+.speed { display: inline-flex; gap: 2px; }
+.toggle { font-size: 0.8rem; color: var(--muted); cursor: pointer; }
+
+/* 景色と地図の帯 */
+.view { min-height: 0; display: flex; flex-direction: column; border-radius: 10px; overflow: hidden; background: #20252b; }
+.stage { position: relative; flex: 1 1 auto; min-height: 140px; background: #7fb6e6; overflow: hidden; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.stage canvas[hidden] { display: none; }
+.hud {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  pointer-events: none;
+}
+.hud span {
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font-size: 12px;
+  padding: 3px 7px;
+  border-radius: 5px;
+}
+#routebar { flex: 0 0 auto; width: 100%; height: clamp(84px, 13vh, 150px); display: block; }
+
+/* ---- 計器盤 ---- */
+.cockpit {
+  /* 丸い計器の大きさ：画面の高さと幅のどちらにも収まるように */
+  --g: clamp(64px, min(15vh, calc((100vw - 600px) / 6.4)), 148px);
+  --lever: calc(var(--g) * 0.72);
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(255, 255, 255, 0.06), transparent 60%),
+    linear-gradient(180deg, #2a2d31, #1c1e21);
+  border: 1px solid #3a3e44;
+  border-top: 5px solid #15171a;
+  border-radius: 12px 12px 10px 10px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.04), 0 6px 18px rgba(0, 0, 0, 0.45);
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: auto auto minmax(250px, 460px);
+  grid-template-areas: "gauges quadrant side";
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+.cockpit.shake { animation: rough 0.09s linear infinite; }
+@keyframes rough {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(calc(var(--shake, 2px) * -1), calc(var(--shake, 2px) * 0.5)); }
+  50% { transform: translate(calc(var(--shake, 2px) * 0.5), calc(var(--shake, 2px) * -0.5)); }
+  75% { transform: translate(var(--shake, 2px), calc(var(--shake, 2px) * 0.5)); }
+  100% { transform: translate(0, 0); }
+}
+
+.gauges { grid-area: gauges; display: grid; grid-template-columns: repeat(6, var(--g)); gap: 4px; }
+.gauge { width: var(--g); height: var(--g); display: block; }
+
+/* スロットルとミクスチャーのレバー */
+.quadrant {
+  grid-area: quadrant;
+  display: flex;
+  gap: 6px;
+  padding: 5px 8px;
+  background: linear-gradient(180deg, #191b1e, #141618);
+  border: 1px solid #34383e;
+  border-radius: 10px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+.lever {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  width: 66px;
+  cursor: pointer;
+}
+.lever .end { font-size: 0.64rem; color: var(--muted); }
+.lever-name { font-size: 0.7rem; font-weight: 700; margin-top: 2px; white-space: nowrap; }
+.lever output { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 700; font-size: 0.8rem; min-height: 1.2em; }
+.slot { position: relative; width: 40px; height: var(--lever); }
+/* 横向きのスライダーを回して縦に立てる。スロットルは上が全開、ミクスチャーは上が濃い */
+.slot input[type="range"] {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--lever);
+  height: 40px;
+  margin: 0;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: grab;
+}
+.mixture .slot input[type="range"] { transform: translate(-50%, -50%) rotate(90deg); }
+.slot input[type="range"]:active { cursor: grabbing; }
+.slot input[type="range"]::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #050607;
+  box-shadow: inset 0 1px 3px #000, 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.slot input[type="range"]::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #050607;
+  box-shadow: inset 0 1px 3px #000, 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.slot input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 32px;
+  height: 32px;
+  margin-top: -12px;
+  border: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #6a6d72, #1a1b1d 65%);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.7), inset 0 -2px 3px rgba(0, 0, 0, 0.6);
+}
+.slot input[type="range"]::-moz-range-thumb {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #6a6d72, #1a1b1d 65%);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.7), inset 0 -2px 3px rgba(0, 0, 0, 0.6);
+}
+/* ミクスチャーは赤い、ぎざぎざのノブ */
+.mixture .slot input[type="range"]::-webkit-slider-thumb {
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.35), transparent 45%),
+    repeating-conic-gradient(#c0352b 0 10deg, #8f1f17 10deg 20deg);
+}
+.mixture .slot input[type="range"]::-moz-range-thumb {
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.35), transparent 45%),
+    repeating-conic-gradient(#c0352b 0 10deg, #8f1f17 10deg 20deg);
+}
+.slot input[type="range"]:focus-visible { outline: none; }
+.slot input[type="range"]:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* 飛行中の操作・警告灯・操縦者（計器盤の右側） */
+.side { grid-area: side; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.nav { display: flex; flex-wrap: wrap; gap: 5px; align-items: stretch; }
+.navbox, .nav > button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(180deg, #191b1e, #141618);
+  border: 1px solid #34383e;
+  border-radius: 8px;
+  padding: 3px 6px;
+  color: var(--text);
+}
+.navbox button {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid #3a3e44;
+  background: #2a2e33;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+.navbox button:disabled { opacity: 0.4; cursor: not-allowed; }
+.navbox output { min-width: 4.6em; text-align: center; font-weight: 700; font-size: 0.85rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+.nav-name { font-size: 0.75rem; font-weight: 700; }
+.nav > button { cursor: pointer; font: inherit; font-size: 0.78rem; font-weight: 700; flex: 1 1 auto; justify-content: center; }
+.nav > button small { display: block; font-size: 0.62rem; font-weight: 400; color: var(--muted); }
+.nav > button:disabled { opacity: 0.4; cursor: not-allowed; }
+.switch .knob {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #6a6d72, #1a1b1d 65%);
+  box-shadow: 0 0 0 2px #2a2e33;
+}
+.switch.on .knob { background: radial-gradient(circle at 35% 30%, #ffd08a, #c46a1c 65%); box-shadow: 0 0 8px rgba(232, 163, 92, 0.8); }
+.switch.on { border-color: var(--accent); }
+.navbtn.warn { border-color: #6b3a36; }
+.navbtn.warn:not(:disabled):hover { background: #3a1f1d; }
+
+/* 操縦者（疲労・焦り） */
+.pilot { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; }
+.pmeter { display: grid; grid-template-columns: 2.4em 1fr auto; gap: 6px; align-items: center; font-size: 0.75rem; }
+.pmeter .st-bar { background: #3a3f46; }
+.pm-name { font-weight: 700; color: var(--muted); }
+.pm-word { font-size: 0.72rem; white-space: nowrap; }
+.pmeter.green .st-bar i { background: var(--green); }
+.pmeter.yellow .st-bar i { background: var(--yellow); }
+.pmeter.red .st-bar i { background: var(--red); }
+.pmeter.red .pm-word { color: var(--red); }
+.pmeter.yellow .pm-word { color: var(--yellow); }
+
+/* クリックで整備士のひとこと */
+[data-param] { cursor: help; }
+.pmeter.plain .st-bar i { background: #8d9096; }
+.kb-row.plain { border-left-color: transparent; }
+
+/* 警告灯 */
+.annunciators { display: flex; gap: 4px; flex-wrap: wrap; }
+.lamp {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid #3a3e44;
+  background: #121315;
+  color: #4a4038;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.lamp[hidden] { display: none; }
+.lamp.red.on { background: #5a1512; color: #ffb3a8; border-color: #ef5a5a; box-shadow: 0 0 12px rgba(239, 90, 90, 0.6); }
+.lamp.amber.on { background: #53400c; color: #ffe08a; border-color: #e8c547; box-shadow: 0 0 12px rgba(232, 197, 71, 0.55); }
+
+/* 飛行メモ（ニーボード）：景色の右上に重ねる */
+.kneeboard {
+  position: absolute;
+  top: 12px;
+  right: 10px;
+  width: min(330px, 46%);
+  background: linear-gradient(180deg, rgba(243, 236, 216, 0.95), rgba(233, 224, 198, 0.95));
+  color: #2b2a26;
+  border-radius: 6px;
+  padding: 12px 10px 6px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+}
+.kneeboard .clip {
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 11px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #b9bcc0, #6f7378);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
+}
+.kb-title { font-size: 0.7rem; font-weight: 700; color: #5c5547; border-bottom: 1px solid #cfc4a6; padding-bottom: 3px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kneeboard dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 1px 10px; }
+.kb-row { display: flex; flex-direction: column; padding: 2px 0 2px 7px; border-left: 3px solid transparent; min-width: 0; }
+.kb-row dt { font-size: 0.64rem; color: #6b6352; }
+.kb-row dd { margin: 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.kb-row .v { font-size: 0.92rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.kb-row .note { font-size: 0.64rem; color: #6b6352; font-variant-numeric: tabular-nums; }
+.kb-row.green { border-left-color: #2f9e6a; }
+.kb-row.yellow { border-left-color: #c9a21c; }
+.kb-row.red { border-left-color: #d63d3d; }
+.kb-row.red .v { color: #c22f2f; }
+
+/* お知らせと整備士のひとこと：景色の下に字幕のように重ねる */
+.stage-bottom {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.stage .mechanic {
+  max-width: min(780px, 100%);
+  background: rgba(20, 22, 26, 0.84);
+  backdrop-filter: blur(2px);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  pointer-events: auto;
+}
+.stage .mechanic:has(#advice:empty) { display: none; }
+
+.mechanic { align-items: center; }
+
+.mechanic {
+  margin: 0;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  background: #1f2329;
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-height: 2.4em;
+}
+.who {
+  flex: 0 0 auto;
+  background: var(--wood);
+  color: #1b1f24;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 12, 15, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 10;
+}
+.overlay[hidden] { display: none; }
+.dialog {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px 22px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 100%;
+  overflow: auto;
+}
+.dialog h2 { margin: 0 0 6px; }
+.dialog h2.ok { color: var(--green); }
+.dialog h2.ng { color: var(--red); }
+.dialog p { line-height: 1.6; margin: 8px 0; }
+.dialog table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.9rem; }
+.dialog td { padding: 4px 0; border-bottom: 1px solid var(--line); }
+.dialog td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.dialog ul { padding-left: 1.2em; line-height: 1.7; margin: 6px 0; }
+.dialog .mechanic { margin-top: 12px; }
+.dialog .primary {
+  margin-top: 14px;
+  width: 100%;
+  padding: 10px;
+  background: var(--accent);
+  color: #1b1f24;
+  border-color: var(--accent);
+  font-weight: 700;
+  font-size: 1rem;
+}
+.dialog .note { color: var(--muted); font-size: 0.8rem; }
+
+/* ---- 格納庫・経由地の画面 ---- */
+.dialog.wide { max-width: 860px; }
+.dialog h3 { margin: 18px 0 6px; font-size: 1rem; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.dialog h3 small { color: var(--muted); font-weight: 400; }
+.dialog .lead { margin-top: 0; }
+.dialog .small, .dialog small { font-size: 0.8rem; color: var(--muted); }
+.dialog td small { display: block; }
+.dialog button { font-size: 0.9rem; }
+.dialog button:disabled { opacity: 0.45; cursor: not-allowed; }
+.howto { background: #1f2329; border-radius: 8px; padding: 6px 12px; margin: 8px 0; }
+.howto summary { cursor: pointer; font-weight: 700; }
+.route-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 8px 0; }
+.route-table th { text-align: left; color: var(--muted); font-weight: 400; border-bottom: 1px solid var(--line); padding: 4px 6px 4px 0; }
+.dialog .route-table td { text-align: left; padding: 5px 6px 5px 0; vertical-align: top; }
+.route-table tr.ng td { color: var(--red); }
+.setup { border-top: 1px solid var(--line); margin-top: 12px; }
+.seg { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.seg.seg3 { grid-template-columns: repeat(3, 1fr); }
+.setup.first { border-top: none; margin-top: 0; }
+.seg button { display: flex; flex-direction: column; align-items: center; padding: 6px 2px; font-weight: 700; }
+.seg button small { font-weight: 400; font-size: 0.7rem; }
+.seg button.on { background: var(--accent); color: #1b1f24; border-color: var(--accent); }
+.seg button.on small { color: #1b1f24; }
+.factors { display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.85rem; }
+.factor { background: #1f2329; border-radius: 5px; padding: 2px 8px; font-variant-numeric: tabular-nums; }
+.factor.good { color: var(--green); }
+.factor.bad { color: var(--red); }
+.verdict.ok { color: var(--green); }
+.verdict.low, .verdict.high { color: var(--yellow); }
+.fuel-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.9rem; }
+.fuel-row input[type="range"] { flex: 1 1 200px; accent-color: var(--accent); }
+.gears { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
+.gear { display: flex; gap: 8px; align-items: flex-start; background: #1f2329; border-radius: 8px; padding: 8px; cursor: pointer; font-size: 0.88rem; }
+.gear.disabled { opacity: 0.45; cursor: not-allowed; }
+.gear input { margin-top: 3px; accent-color: var(--accent); }
+.torque-ok { color: var(--green); }
+.torque-under { color: var(--yellow); }
+.torque-over { color: var(--red); }
+.summary { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--line); margin-top: 14px; padding-top: 10px; }
+.problems { color: var(--red); font-size: 0.88rem; }
+.ng-text { color: var(--red); }
+.plan { background: #1f2329; border-radius: 8px; padding: 8px 12px; font-size: 0.88rem; line-height: 1.7; }
+.buttons-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.buttons-row button { flex: 1 1 200px; padding: 10px; }
+.buttons-row .primary { margin-top: 0; }
+
+
+/* 最終評価 */
+.rank { display: flex; align-items: center; gap: 16px; background: #1f2329; border-radius: 10px; padding: 10px 16px; margin: 10px 0; }
+.rank-letter { font-size: 3rem; font-weight: 800; line-height: 1; width: 1.2em; text-align: center; }
+.rank-S .rank-letter { color: #f2c94c; }
+.rank-A .rank-letter { color: var(--green); }
+.rank-B .rank-letter { color: var(--blue); }
+.rank-C .rank-letter { color: var(--muted); }
+.rank-total { color: var(--muted); }
+.dialog table.score td small { display: block; }
+.dialog table.score td:last-child { font-weight: 700; white-space: nowrap; }
+.dialog table.score tr.minus td:last-child { color: var(--red); }
+.lessons { list-style: none; padding: 0; display: grid; gap: 6px; }
+.lessons li { background: #1f2329; border-left: 4px solid var(--yellow); border-radius: 6px; padding: 6px 12px; font-size: 0.88rem; line-height: 1.6; }
+.lessons li.ok { border-left-color: var(--green); }
+
+/* 予報 */
+.forecast { background: #1f2329; border-radius: 8px; padding: 6px 12px; margin: 6px 0; }
+.winds { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 0.85rem; align-items: baseline; }
+.wind { background: #262b32; border-radius: 4px; padding: 1px 6px; font-variant-numeric: tabular-nums; }
+.fogmeter { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; font-size: 0.85rem; margin: 4px 0 8px; }
+.fogmeter.green .st-bar i { background: var(--green); }
+.fogmeter.yellow .st-bar i { background: var(--yellow); }
+.fogmeter.red .st-bar i { background: var(--red); }
+.fogmeter.red { color: var(--red); }
+
+/* 経由地 */
+.arrival { background: #1f2329; border-left: 4px solid var(--yellow); border-radius: 6px; padding: 8px 12px; margin: 8px 0; }
+.arrival.ok { border-left-color: var(--green); }
+.arrival ul { margin: 4px 0 0; padding-left: 1.2em; font-size: 0.88rem; line-height: 1.6; }
+.actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
+.actions button { display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 8px 10px; gap: 2px; }
+.actions button small { font-size: 0.75rem; }
+
+/* 機体の状態 B1〜B5 */
+.status { display: flex; flex-direction: column; gap: 4px; }
+.st-row { display: grid; grid-template-columns: 9.5em 1fr 7.5em; gap: 10px; align-items: center; font-size: 0.88rem; }
+.st-name small { color: var(--muted); }
+.st-line { grid-column: 1 / -1; font-size: 0.78rem; color: var(--muted); padding-left: 2.2em; margin-top: -2px; }
+.st-row.plain .st-bar i { background: #8d9096; }
+.notice { background: #3a3014; border: 1px solid var(--yellow); color: #ffe08a; border-radius: 8px; padding: 8px 12px; margin: 8px 0; font-size: 0.9rem; }
+.actions button.attention { border-color: var(--yellow); box-shadow: 0 0 0 2px rgba(232, 197, 71, 0.35); }
+.st-bar { height: 8px; background: #1c2026; border-radius: 4px; overflow: hidden; }
+.st-bar i { display: block; height: 100%; border-radius: 4px; background: var(--line); }
+.st-row.green .st-bar i { background: var(--green); }
+.st-row.yellow .st-bar i { background: var(--yellow); }
+.st-row.red .st-bar i { background: var(--red); }
+.st-row.red .st-word { color: var(--red); }
+.st-row.yellow .st-word { color: var(--yellow); }
+
+/* ボルト締めのミニゲーム */
+.torque { margin: 14px 0; }
+.tq-meter { position: relative; height: 34px; background: #0d0f11; border-radius: 6px; overflow: hidden; box-shadow: inset 0 2px 4px #000; }
+.tq-band { position: absolute; top: 0; bottom: 0; background: rgba(76, 195, 138, 0.3); border-left: 2px solid var(--green); border-right: 2px solid var(--green); }
+.tq-fill { position: absolute; left: 0; top: 8px; bottom: 8px; width: 0; background: linear-gradient(90deg, #b9bcc0, #e8a35c); border-radius: 0 4px 4px 0; }
+.tq-click { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-weight: 700; color: var(--green); opacity: 0; }
+.tq-click.on { opacity: 1; }
+.tq-scale { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+.tq-bolts { display: flex; gap: 10px; justify-content: center; margin-top: 12px; }
+.tq-bolt { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #2f353d; border: 2px solid var(--line); font-weight: 700; }
+.tq-bolt.ok { border-color: var(--green); color: var(--green); }
+.tq-bolt.under { border-color: var(--yellow); color: var(--yellow); }
+.tq-bolt.over { border-color: var(--red); color: var(--red); }
+.tq-hold { user-select: none; touch-action: none; }
+.tq-hold.down { filter: brightness(0.85); transform: translateY(1px); }
+
+/* 飛行中のお知らせ（整備士のひとことの上に出す） */
+.toast {
+  max-width: min(520px, 100%);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 5px 10px;
+  border-radius: 6px;
+  text-align: center;
+}
+.toast[hidden] { display: none; }
+
+/* ---- 幅の狭い画面（スマホなど）：計器を横6つ小さく並べ、その下にレバーと操作 ---- */
+@media (max-width: 820px) {
+  #app { padding: 6px; gap: 4px; min-height: 600px; }
+  .topbar { gap: 2px 10px; }
+  .route { font-size: 0.85rem; }
+  .clock { font-size: 0.78rem; }
+  .clock strong { font-size: 0.95rem; margin-right: 4px; }
+  .buttons button { padding: 3px 7px; font-size: 0.75rem; }
+  .cockpit {
+    --g: min(calc((100vw - 52px) / 6), 96px);
+    --lever: 72px;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "gauges gauges"
+      "quadrant side";
+    padding: 6px;
+    gap: 6px;
+  }
+  .gauges { gap: 2px; justify-content: center; }
+  .kneeboard { width: min(250px, 60%); padding: 10px 7px 4px; }
+  .kb-title { display: none; }
+  .kb-row .v { font-size: 0.8rem; }
+  .kb-row .note { display: none; }
+  .stage .mechanic { font-size: 0.78rem; padding: 6px 9px; max-height: 4.6em; overflow: hidden; }
+  .hud span { font-size: 11px; padding: 2px 5px; }
+  .pilot { grid-template-columns: 1fr; }
+  .navbox output { min-width: 4em; font-size: 0.78rem; }
+  .nav > button { font-size: 0.7rem; padding: 3px 5px; }
+  .st-row { grid-template-columns: 7.5em 1fr 6em; }
+}
+
+/* ---- 地図（行き先を選ぶ） ---- */
+.route-plan { display: grid; grid-template-columns: minmax(200px, 300px) minmax(0, 1fr); gap: 14px; align-items: start; }
+.worldmap { width: 100%; height: auto; max-height: 460px; display: block; }
+.worldmap .land { fill: #1e2a24; stroke: #34413a; }
+.worldmap .north { fill: #8d9096; font-size: 18px; }
+.worldmap text:not(.shop) { paint-order: stroke; stroke: #1e2a24; stroke-width: 5px; stroke-linejoin: round; }
+.worldmap .edge line { stroke: #56606b; stroke-width: 3; }
+.worldmap .edge.suggested line { stroke: #e8a35c; stroke-width: 3; stroke-dasharray: 10 8; opacity: 0.7; }
+.worldmap .edge.flown line { stroke: #8fb3a0; stroke-width: 4; }
+.worldmap .edge.chosen line { stroke: #e8a35c; stroke-width: 7; }
+.worldmap .edge .km { fill: #9aa3ad; font-size: 15px; }
+.worldmap .mtn { fill: #6b7a5e; stroke: #a7b39a; stroke-width: 1.5; }
+.worldmap .field .dot { fill: #ecebe6; stroke: #1b1f24; stroke-width: 2; }
+.worldmap .field.unpaved .dot { fill: #1e2a24; stroke: #ecebe6; stroke-width: 3; }
+.worldmap .field .shop { fill: #1b1f24; font-size: 11px; font-weight: 700; pointer-events: none; }
+.worldmap .field.unpaved .shop { fill: #ecebe6; }
+.worldmap .field .name { fill: #ecebe6; font-size: 19px; font-weight: 700; }
+.worldmap .field .sub { fill: #9aa3ad; font-size: 13px; }
+.worldmap .field .flag { fill: #f2c94c; font-size: 20px; }
+.worldmap .field .here { fill: none; stroke: #4cc38a; stroke-width: 3; }
+.worldmap .field .hit { fill: rgba(232, 163, 92, 0.12); stroke: rgba(232, 163, 92, 0.6); stroke-width: 2; }
+.worldmap .field.selectable { cursor: pointer; }
+.worldmap .field.selectable:hover .hit { fill: rgba(232, 163, 92, 0.3); }
+.worldmap .field.chosen .dot { fill: #e8a35c; }
+.worldmap .field.chosen .hit { fill: rgba(232, 163, 92, 0.35); stroke: #e8a35c; }
+.map-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin: 4px 0; }
+.map-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.lg { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+.lg.dot-paved { background: #ecebe6; }
+.lg.dot-unpaved { border: 2px solid #ecebe6; }
+.lg.line-suggested { width: 22px; height: 0; border-radius: 0; border-top: 3px dashed #e8a35c; }
+.dest-list { display: flex; flex-direction: column; gap: 6px; }
+.dest-list button { display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 8px 10px; gap: 2px; }
+.dest-list button.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(232, 163, 92, 0.4); }
+.dest-list button b { font-size: 0.95rem; }
+.dest-list .tag { font-size: 0.7rem; background: var(--accent); color: #1b1f24; border-radius: 4px; padding: 0 5px; margin-left: 6px; }
+.dest-list .late { color: var(--red); }
+@media (max-width: 820px) {
+  .route-plan { grid-template-columns: 1fr; }
+  .worldmap { max-height: 340px; }
+}
+
+/* ---- 機体の点検図（B1〜B6 を機体の絵で指す） ---- */
+.inspection svg { width: 100%; height: auto; display: block; background: #1a1e23; border-radius: 10px; }
+.inspection .cap { fill: #8d9096; font-size: 13px; }
+.inspection .zoom { stroke: #6b7480; stroke-width: 1.5; stroke-dasharray: 5 5; }
+.inspection .lid { fill: #ecebe6; font-size: 14px; font-weight: 700; }
+.inspection .lword { font-size: 14px; font-weight: 700; }
+.inspection .callout.alert .spot { animation: spot 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes spot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.5); }
+}
+.dialog .issues, .issues { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; }
+.issues li { background: #1f2329; border-left: 4px solid var(--yellow); border-radius: 6px; padding: 5px 10px; font-size: 0.85rem; display: flex; flex-direction: column; }
+.issues li.red { border-left-color: var(--red); }
+.issues li span { color: var(--muted); font-size: 0.8rem; }
+.issues-none { margin: 6px 0 0; }
