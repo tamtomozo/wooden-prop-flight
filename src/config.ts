@@ -40,6 +40,9 @@ export const VIBRATION_YELLOW = 30;
 export const VIBRATION_RED = 60;
 /** 締め付けが「不足」だったときの締まり具合 */
 export const BOLT_AFTER_UNDER = 85;
+/** ボルト締め付けミニゲームの「適正」の範囲（トルク 0..100） */
+export const TORQUE_OK_FROM = 62;
+export const TORQUE_OK_TO = 82;
 
 // ---- 経由地 ----
 /** 朝の出発時刻（0時からの分） */

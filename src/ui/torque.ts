@@ -1,13 +1,13 @@
 // A3 ボルトの締め付けミニゲーム。
 // ボタンを押している間トルクが上がる。トルクレンチが「カチッ」と鳴る範囲で離せば適正。
 // 早すぎれば不足、遅すぎれば締めすぎ（木がつぶれる）。
+import { TORQUE_OK_FROM, TORQUE_OK_TO } from "../config";
 import type { TorqueResult } from "../model/types";
 import { mechanicLine, openDialog } from "./dialog";
 
 const BOLTS = 3;
-/** 適正の範囲（0..100） */
-const OK_FROM = 62;
-const OK_TO = 82;
+const OK_FROM = TORQUE_OK_FROM;
+const OK_TO = TORQUE_OK_TO;
 
 const RESULT_TEXT: Record<TorqueResult, string> = { under: "不足", ok: "適正", over: "締めすぎ" };
 
