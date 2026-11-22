@@ -10,7 +10,9 @@
 
 ## 動かし方
 
-**遊ぶだけなら**：`dist/index.html` をダブルクリックしてブラウザで開く（JS と CSS を埋め込んだ1ファイルなので、サーバーは要らない）。
+**ブラウザですぐ遊ぶ**：https://tamtomozo.github.io/wooden-prop-flight/ （`main` に push すると GitHub Actions がテスト・ビルドして自動で更新する。設定は `.github/workflows/pages.yml`）
+
+**手元で遊ぶ**：`npm run build` のあと `dist/index.html` をダブルクリックしてブラウザで開く（JS と CSS を埋め込んだ1ファイルなので、サーバーは要らない）。
 
 **開発するとき**：
 
