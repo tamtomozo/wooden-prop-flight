@@ -2,7 +2,7 @@
 import { DIFFICULTY } from "../data/difficulty";
 import { equipmentKg, NO_EQUIPMENT } from "../data/equipment";
 import { field } from "../data/world";
-import { setupProblems, suggestedDestination } from "../game/campaign";
+import { setupProblems, startCampaign, suggestedDestination } from "../game/campaign";
 import { recommendSetup, type Recommendation } from "../game/recommend";
 import type { Difficulty, Equipment, PitchLevel, Setup, TorqueResult, World } from "../model/types";
 import { mechanicLine, openDialog, setActions } from "./dialog";
@@ -12,6 +12,7 @@ import { pitchDiagramHtml } from "./pitchDiagram";
 import { routePlanHtml } from "./routePlan";
 import { runTorque } from "./torque";
 import { torqueDiagramHtml } from "./torqueDiagram";
+import { nextLegHtml } from "./waypoint";
 
 const PITCH_NAMES: Record<PitchLevel, string> = { 1: "上昇型", 2: "やや上昇", 3: "中間", 4: "やや巡航", 5: "巡航型" };
 
@@ -25,8 +26,13 @@ interface HangarState {
   torque: TorqueResult | null;
 }
 
+/**
+ * seed は、出発したあとの旅と同じものを渡す（天気の予報が決まる）。
+ * そうすると、格納庫で見る最初の区間の予報と、実際に飛ぶ日の予報が同じになる。
+ */
 export function showHangar(
   world: World,
+  seed: number,
   onDepart: (setup: Setup, difficulty: Difficulty, destination: string) => void,
   onChangeCourse: () => void,
   initial?: Partial<HangarState>,
@@ -102,6 +108,10 @@ export function showHangar(
               .join("")}
           </table>
         </details>
+      </section>
+
+      <section class="setup leg-plan">
+        ${nextLegHtml(startCampaign(world, setupOf(), seed, st.difficulty, st.destination), (from, to) => `<h3>${from} → ${to} <small>最初の区間・今日の予報</small></h3>`)}
       </section>
 
       <div class="recommend">

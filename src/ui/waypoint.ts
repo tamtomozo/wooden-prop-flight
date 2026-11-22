@@ -68,7 +68,6 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
     const d = opts.details();
     const a = c.condition;
     const tc = takeoffCheck(c);
-    const est = estimateNextLeg(c);
     const problems = departureProblems(c);
     const toSunset = c.world.sunsetMin - c.clockMin;
     const fuelInfo = refuelInfo(c, fuelTarget);
@@ -86,9 +85,6 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
         <b>${label}</b><small>${info.min ? fmtDuration(info.min) : ""}${info.reason ? `（${info.reason}）` : ""}${extra}</small>
       </button>`;
 
-    const etaMin = est ? c.clockMin + est.minutes : Infinity;
-    const wx = legWeather(c);
-    const destSpread = leg && Number.isFinite(etaMin) ? spreadAt(leg.to, etaMin) : 99;
 
     openDialog(
       `<h2>${arrival ? `${here.name}に着陸` : `${here.name}`}</h2>
@@ -142,28 +138,7 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
         equipmentKg: equipmentKg(c.setup.equipment),
       })}
 
-      ${
-        leg && wx
-          ? `<h3>${leg.from.name} → ${leg.to.name}</h3>
-      <p class="small">${leg.note}</p>
-      ${legProfileHtml({
-        leg,
-        forecast: wx.forecast,
-        est,
-        nowMin: c.clockMin,
-        sunsetMin: c.world.sunsetMin,
-        fuelL: a.fuelRemaining,
-        capacityL: c.world.fuelCapacityL,
-        destSpread,
-      })}
-      <details class="howto">
-        <summary>予報と区間の数字（文字で見る）</summary>
-        ${forecastHtml(wx.forecast, leg.distanceKm, leg.from.elevation)}
-        <p class="small">${leg.distanceKm} km・地上の風 ${leg.headwindKmh >= 0 ? `向かい風 ${leg.headwindKmh}` : `追い風 ${-leg.headwindKmh}`} km/h・すすめの巡航高度 ${leg.cruiseAltitude} m・着く先は ${leg.to.surface === "paved" ? "舗装" : "未舗装"}（湿度 ${leg.to.humidity}%）</p>
-        ${est ? `<p class="small">目安（出力${PLAN_THROTTLE * 100}%・最良燃費）：約 ${fmtDuration(est.minutes)}・燃料 約 ${est.fuelL.toFixed(0)} L ＋ 予備 → 到着 ${etaMin < 24 * 60 ? fmtClock(etaMin) : "—"}</p>` : ""}
-      </details>`
-          : ""
-      }
+      ${nextLegHtml(c)}
       <p class="small">今の重さ ${Math.round(tc.weight)} kg・気温 ${tc.temperature.toFixed(0)}℃・離陸距離 ${Math.round(tc.distance)} m / 滑走路 ${tc.runway} m ${tc.ok ? "○" : "×（燃料を減らすか、涼しい時間を待つ）"}</p>
       ${problems.length ? `<p class="problems">${problems.join("・")}</p>` : ""}
       <button class="primary" data-act="depart" ${problems.length ? "disabled" : ""}>${leg ? `${leg.to.name}へ出発する` : "行き先を選ぶ"}</button>`,
@@ -281,6 +256,37 @@ function itemText(i: ForecastItem): { where: string; what: string } {
 }
 
 /** 予報（確率つき）と高度別の風 */
+/**
+ * 次の区間「◯◯ → △△」の説明：道のひとこと・断面図（地形と予報）・文字の予報。
+ * 経由地と格納庫（最初の区間）で同じものを出す。行き先を選んでいなければ空。
+ */
+export function nextLegHtml(c: CampaignState, heading = (from: string, to: string) => `<h3>${from} → ${to}</h3>`): string {
+  const leg = nextLeg(c);
+  const wx = legWeather(c);
+  if (!leg || !wx) return "";
+  const est = estimateNextLeg(c);
+  const etaMin = est ? c.clockMin + est.minutes : Infinity;
+  const destSpread = Number.isFinite(etaMin) ? spreadAt(leg.to, etaMin) : 99;
+  return `${heading(leg.from.name, leg.to.name)}
+      <p class="small">${leg.note}</p>
+      ${legProfileHtml({
+        leg,
+        forecast: wx.forecast,
+        est,
+        nowMin: c.clockMin,
+        sunsetMin: c.world.sunsetMin,
+        fuelL: c.condition.fuelRemaining,
+        capacityL: c.world.fuelCapacityL,
+        destSpread,
+      })}
+      <details class="howto">
+        <summary>予報と区間の数字（文字で見る）</summary>
+        ${forecastHtml(wx.forecast, leg.distanceKm, leg.from.elevation)}
+        <p class="small">${leg.distanceKm} km・地上の風 ${leg.headwindKmh >= 0 ? `向かい風 ${leg.headwindKmh}` : `追い風 ${-leg.headwindKmh}`} km/h・すすめの巡航高度 ${leg.cruiseAltitude} m・着く先は ${leg.to.surface === "paved" ? "舗装" : "未舗装"}（湿度 ${leg.to.humidity}%）</p>
+        ${est ? `<p class="small">目安（出力${PLAN_THROTTLE * 100}%・最良燃費）：約 ${fmtDuration(est.minutes)}・燃料 約 ${est.fuelL.toFixed(0)} L ＋ 予備 → 到着 ${etaMin < 24 * 60 ? fmtClock(etaMin) : "—"}</p>` : ""}
+      </details>`;
+}
+
 function forecastHtml(f: Forecast, distanceKm: number, fieldElevation: number) {
   const rows = f.items
     .filter((i) => i.prob > 0)

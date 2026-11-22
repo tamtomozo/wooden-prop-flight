@@ -346,10 +346,13 @@ function goHangar() {
   flight = previewFlight();
   $("#sunset").textContent = fmtClock(world.sunsetMin);
   applyControls(75, 0, true);
+  // 格納庫で見せる予報と、出発してからの天気を同じにするため、旅の乱数の種はここで決める
+  const seed = Date.now();
   showHangar(
     world,
+    seed,
     (setup, difficulty, destination) => {
-      campaign = startCampaign(world, setup, Date.now(), difficulty, destination);
+      campaign = startCampaign(world, setup, seed, difficulty, destination);
       cockpit.setDifficulty(difficulty);
       departLeg();
     },

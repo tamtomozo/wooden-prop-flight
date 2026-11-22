@@ -6,6 +6,7 @@ import {
   edgeRepairInfo,
   finishLeg,
   isFinished,
+  legWeather,
   recoverWithSpare,
   refuel,
   rest,
@@ -15,6 +16,7 @@ import {
   startCampaign,
   takeoffCheck,
 } from "../src/game/campaign";
+import { WORLD } from "../src/data/world";
 import { humidityBoltLoss } from "../src/model/physics";
 import { REFUEL_MIN, SHOP } from "../src/config";
 import { CLEAR_ROUTE as STEP2_ROUTE, flyLeg, makeSetup } from "./helpers";
@@ -155,4 +157,13 @@ describe("経由地での判断", () => {
     expect(loss("tape")).toBeLessThan(loss("none"));
   });
 
+  it("格納庫で見る最初の区間の予報は、同じ種なら、出発したあとの予報と同じ（ピッチ・燃料・装備では変わらない）", () => {
+    const seed = 12345;
+    const hangar = startCampaign(WORLD, makeSetup(3, 100), seed, "normal", "kawara");
+    const trip = startCampaign(WORLD, makeSetup(1, 40, "ok", { weatherRadio: true }), seed, "normal", "kawara");
+    expect(legWeather(trip)).toEqual(legWeather(hangar));
+    // 行き先が変われば、別の道の予報になる
+    const other = startCampaign(WORLD, makeSetup(3, 100), seed, "normal", "hamakaze");
+    expect(legWeather(other)!.forecast).not.toEqual(legWeather(hangar)!.forecast);
+  });
 });
