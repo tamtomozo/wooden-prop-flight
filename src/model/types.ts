@@ -58,6 +58,14 @@ export interface Waypoint {
   /** 地図の上の位置 km（東が +x、北が +y） */
   x: number;
   y: number;
+  /** 地図で名前を書く側（書かなければ自動） */
+  labelSide?: "left" | "right";
+}
+
+/** 海の上の範囲（区間の出発地からの距離 km）。ここでは降りられる場所がない */
+export interface SeaStretch {
+  fromKm: number;
+  toKm: number;
 }
 
 /** 1区間 */
@@ -72,6 +80,8 @@ export interface Leg {
   /** 山の尾根（区間の途中の地形） */
   terrain: Ridge[];
   weather: WeatherTemplate;
+  /** 海の上を飛ぶ範囲（陸だけの区間なら空） */
+  sea: SeaStretch[];
 }
 
 export interface Ridge {
@@ -174,9 +184,22 @@ export interface Edge {
   weather: WeatherTemplate;
 }
 
-/** 旅の舞台（地図） */
+/** 旅の舞台（地図）。コースごとに1つ */
 export interface World {
+  /** コースの id */
+  id: string;
+  /** コースの名前（「かもめ海峡を渡る」など） */
+  title: string;
+  /** 出発地 → 目的地 */
   name: string;
+  /** コースの説明（何が難しいか） */
+  description: string;
+  /** もとにした史実 */
+  history: string;
+  /** 難しさ 1..3 */
+  level: number;
+  /** 陸地の形（地図の km。[x, y] の並び）。書かなければ全部が陸 */
+  land?: [number, number][][];
   fields: Waypoint[];
   edges: Edge[];
   startId: string;

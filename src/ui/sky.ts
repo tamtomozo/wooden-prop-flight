@@ -1,4 +1,4 @@
-// 時刻に合わせた空の色。横の視点と3Dの視点で共通に使う。
+// 時刻に合わせた空の色（3Dの景色で使う）。
 import { clockMin, type FlightState } from "../game/flight";
 
 export type RGB = [number, number, number];

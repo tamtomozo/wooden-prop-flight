@@ -43,7 +43,7 @@ import type {
   World,
 } from "../model/types";
 import { foggedAt, generateWeather, periodOf, surfaceTemp } from "../model/weather";
-import { createFlight, groundElevation, type FlightState } from "./flight";
+import { createFlight, groundElevation, overSea, type FlightState } from "./flight";
 
 export interface LegRecord {
   leg: Leg;
@@ -354,9 +354,13 @@ export function beginLeg(c: CampaignState): { flight: FlightState; notes: string
   return { flight, notes };
 }
 
+/** 予備プロペラで不時着から復帰できるか（海の上では降りる畑がないのでできない） */
+export const canRecoverWithSpare = (c: CampaignState, f: FlightState) =>
+  c.spareAvailable && f.status === "propFailure" && !overSea(f);
+
 /** 予備プロペラで不時着から復帰する。復帰できたら true */
 export function recoverWithSpare(c: CampaignState, f: FlightState): boolean {
-  if (!c.spareAvailable || f.status !== "propFailure") return false;
+  if (!canRecoverWithSpare(c, f)) return false;
   c.spareAvailable = false;
   const a = f.condition;
   a.propEdge = 100;

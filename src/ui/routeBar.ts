@@ -1,7 +1,7 @@
 // ルートの帯：上は「上から見た地図」、下は「横から見た高度の断面」。
 // 予報（点線・確率つき）と、目で見て確かめた実際の天気（塗り）を描き分ける。
 import { CB_DANGER_KM, MAX_ALTITUDE } from "../config";
-import { destination, distanceLeft, knownState, terrainAt, type FlightState } from "../game/flight";
+import { destination, distanceLeft, knownState, noReturnKm, terrainAt, type FlightState } from "../game/flight";
 import type { Area, ForecastItem } from "../model/types";
 import { itemArea } from "../model/weather";
 
@@ -80,6 +80,10 @@ export class RouteBar {
     ctx.rect(0, 0, this.w, MAP_H);
     ctx.clip();
 
+    // 海の上（降りられる場所がない）
+    ctx.fillStyle = "rgba(60,120,170,0.22)";
+    for (const r of s.leg.sea) ctx.fillRect(xOf(r.fromKm), 0, xOf(r.toKm) - xOf(r.fromKm), MAP_H);
+
     // 予報と実際の天気
     for (const item of s.forecast.items) this.drawItem(s, item, xOf, yOf, kmPx, latPx);
 
@@ -110,6 +114,22 @@ export class RouteBar {
         ctx.textAlign = "center";
         ctx.fillText("燃料切れ", xOf(end), cy - 8);
       }
+    }
+
+    // 引き返し限界点（海の上の区間だけ）。ここを越えると、戻る燃料がない
+    const pnr = s.leg.sea.length && s.status === "flying" ? noReturnKm(s) : null;
+    if (pnr !== null && pnr < s.leg.distanceKm) {
+      const x = xOf(pnr);
+      ctx.strokeStyle = "rgba(239,90,90,0.9)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, cy - 10);
+      ctx.lineTo(x, cy + 10);
+      ctx.stroke();
+      ctx.fillStyle = "#ef5a5a";
+      ctx.font = "bold 10px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(s.pastNoReturn ? "限界点（越えた）" : "引き返し限界", x, cy - 13);
     }
 
     // 飛行場
@@ -261,7 +281,7 @@ export class RouteBar {
       ctx.fillText(`凍結 ${s.forecast.freezingLevel}m`, x1 + PAD - 4, fz + 3);
     }
 
-    // 地形
+    // 地形（海の上は青い帯）
     ctx.fillStyle = "#3d5a3a";
     ctx.beginPath();
     ctx.moveTo(x0, bottom);
@@ -269,6 +289,8 @@ export class RouteBar {
     ctx.lineTo(x1, bottom);
     ctx.closePath();
     ctx.fill();
+    ctx.fillStyle = "#3c78aa";
+    for (const r of s.leg.sea) ctx.fillRect(xOf(r.fromKm), bottom - 4, xOf(r.toKm) - xOf(r.fromKm), 4);
 
     // 目標高度と機体
     ctx.strokeStyle = "rgba(232,163,92,0.5)";

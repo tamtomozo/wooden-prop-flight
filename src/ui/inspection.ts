@@ -17,7 +17,7 @@ const COLOR: Record<Level, string> = { green: "#4cc38a", yellow: "#e8c547", red:
 const PLAIN = "#a3a8b0";
 const WOOD = "#9a6a3a";
 
-// 横から見た機体の位置と大きさ（2D の景色の機体の座標を3倍にして使う）
+// 横から見た機体の位置と大きさ（点検図の座標）
 const SX = 280;
 const SY = 165;
 const S = 3;

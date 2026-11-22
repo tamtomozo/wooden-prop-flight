@@ -2,6 +2,7 @@
 // 見た目用の世界なので、高度や距離の縮尺は実際の値とは合わせていない。
 import * as THREE from "three";
 import { DETOUR_ANGLE, DISORIENT_LIMIT_MIN } from "../config";
+import { seaAt } from "../data/world";
 import { groundElevation, type FlightState } from "../game/flight";
 import type { LegWeather, RunwaySurface } from "../model/types";
 import { skyAt, type RGB } from "./sky";
@@ -22,6 +23,10 @@ const GROUND_SIZE = 5000;
 const GROUND_REPEAT = 14;
 /** 山を置く、道筋からの最小の横距離（近すぎると画面をふさぐ） */
 const HILL_MIN_X = 420;
+/** 海の波の模様1枚の大きさ（画面上の単位） */
+const SEA_TILE = 260;
+/** 1区間の中の、海の上の範囲の数の上限（これより多いぶんは描かない） */
+const SEA_MAX = 4;
 
 const color = (c: RGB) => new THREE.Color().setRGB(c[0] / 255, c[1] / 255, c[2] / 255, THREE.SRGBColorSpace);
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
@@ -43,6 +48,8 @@ export class BackScene {
   private prop = new THREE.Group();
   private propDisc: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>;
   private hills: THREE.Mesh[] = [];
+  /** 海の上の範囲ごとの海面（地面の少し上に重ねる） */
+  private seas: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>[] = [];
   private clouds: THREE.Group[] = [];
   /** 雲は後ろ側（影の側）から見ることが多いので、空の色で少し自分で光らせる */
   private cloudMat = lambert(0xffffff, { transparent: true, opacity: 0.94 });
@@ -106,6 +113,19 @@ export class BackScene {
     ground.rotation.x = -Math.PI / 2;
     ground.position.z = -GROUND_SIZE / 2 + 600;
     this.scene.add(ground);
+
+    // 海：海の上の範囲だけ、地面の上に海面を重ねる
+    const seaTex = makeSeaTexture();
+    for (let i = 0; i < SEA_MAX; i++) {
+      const tex = seaTex.clone();
+      tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+      const sea = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ map: tex }));
+      sea.rotation.x = -Math.PI / 2;
+      sea.position.y = 0.6;
+      sea.visible = false;
+      this.seas.push(sea);
+      this.scene.add(sea);
+    }
 
     // 山：飛ぶ道筋の左右に並べる
     const hillColors = [0x4f7a46, 0x5d8a4e, 0x6b8f5a, 0x7a8f6a, 0x8a9a7a];
@@ -371,6 +391,24 @@ export class BackScene {
     this.depRunway.place(near(zFrom), zFrom, fieldX, s.leg.from.surface, s.holding && s.returning);
     this.arrRunway.place(near(zTo), zTo, fieldX, s.leg.to.surface, s.holding && !s.returning);
 
+    // 海：海の上の範囲に海面を置き、波の模様はコースの距離に合わせて流す。海の上には山を置かない
+    this.seas.forEach((sea, i) => {
+      const r = s.leg.sea[i];
+      if (!r) return void (sea.visible = false);
+      const za = Math.min(400, Math.max(-FAR - 600, zOf(r.fromKm)));
+      const zb = Math.min(400, Math.max(-FAR - 600, zOf(r.toKm)));
+      const len = Math.abs(zb - za);
+      sea.visible = len > 1;
+      if (!sea.visible) return;
+      const zNear = Math.max(za, zb);
+      sea.position.set(fieldX, 0.6, zNear - len / 2);
+      sea.scale.set(GROUND_SIZE, len, 1);
+      const tex = sea.material.map!;
+      tex.repeat.set(GROUND_SIZE / SEA_TILE, (h * len) / SEA_TILE);
+      tex.offset.set((this.t * 0.01) % 1, ((((s.distanceFlown * KM - h * zNear) / SEA_TILE) % 1) + 1) % 1);
+    });
+    for (const hill of this.hills) hill.visible = !seaAt(s.leg, s.distanceFlown - (h * hill.position.z) / KM);
+
     // 実際の天気（雲・雨のカーテン・積乱雲・雨粒）
     this.wx.update(s, realDt, running, this.camera.position);
 
@@ -449,6 +487,38 @@ function makeFieldTexture(): THREE.CanvasTexture {
   g.moveTo(0, cs * 5);
   g.lineTo(size, cs * 5);
   g.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+/** 海の模様（上から見た波）。白い波頭を散らす */
+function makeSeaTexture(): THREE.CanvasTexture {
+  const size = 256;
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const g = c.getContext("2d")!;
+  g.fillStyle = "#2f6f9e";
+  g.fillRect(0, 0, size, size);
+  // 濃淡のうねり
+  for (let i = 0; i < 14; i++) {
+    g.fillStyle = i % 2 ? "rgba(70,140,190,0.35)" : "rgba(20,70,110,0.3)";
+    g.beginPath();
+    g.ellipse((i * 71) % size, (i * 137) % size, 70, 16, 0.1, 0, Math.PI * 2);
+    g.fill();
+  }
+  // 波頭
+  g.strokeStyle = "rgba(235,245,250,0.7)";
+  g.lineWidth = 2;
+  for (let i = 0; i < 40; i++) {
+    const x = (i * 97) % size;
+    const y = (i * 53 + (i % 5) * 11) % size;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.quadraticCurveTo(x + 5, y - 2, x + 11, y);
+    g.stroke();
+  }
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;

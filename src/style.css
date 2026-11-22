@@ -60,7 +60,7 @@ button { font: inherit; }
 .view { min-height: 0; display: flex; flex-direction: column; border-radius: 10px; overflow: hidden; background: #20252b; }
 .stage { position: relative; flex: 1 1 auto; min-height: 140px; background: #7fb6e6; overflow: hidden; }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.stage canvas[hidden] { display: none; }
+.no-webgl { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 16px; text-align: center; color: #1b1f24; }
 .hud {
   position: absolute;
   left: 10px;
@@ -380,6 +380,7 @@ button { font: inherit; }
 .dialog td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
 .dialog ul { padding-left: 1.2em; line-height: 1.7; margin: 6px 0; }
 .dialog .mechanic { margin-top: 12px; }
+.dialog .setup > h3 + .mechanic { margin-top: 6px; margin-bottom: 10px; }
 .dialog .primary {
   margin-top: 14px;
   width: 100%;
@@ -583,6 +584,8 @@ button { font: inherit; }
 .lp-t { font-size: 9.5px; fill: var(--muted); }
 .lp-grid { stroke: #2c323a; stroke-width: 1; }
 .lp-ground { fill: #3d4a3b; stroke: #6f8a68; stroke-width: 1; }
+.lp-sea { fill: #3c78aa; }
+.lp-sea-t { fill: #7fbdf2; }
 .lp-ridge-t { fill: #9fb897; }
 .lp-path { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; }
 .lp-path-t { fill: var(--accent); font-weight: 700; }
@@ -788,6 +791,46 @@ button { font: inherit; }
 .lg.dot-paved { background: #ecebe6; }
 .lg.dot-unpaved { border: 2px solid #ecebe6; }
 .lg.line-suggested { width: 22px; height: 0; border-radius: 0; border-top: 3px dashed #e8a35c; }
+.lg.line-sea { width: 22px; height: 0; border-radius: 0; border-top: 3px solid #5aa9ef; }
+.dest-list .sea-note { color: #7fbdf2; }
+
+/* ---- 海と陸（地図） ---- */
+.worldmap .sea { fill: #16283a; stroke: #2a4560; }
+.worldmap .land-shape { fill: #24332a; stroke: #4a6352; stroke-width: 1.5; stroke-linejoin: round; }
+.worldmap .edge .sea-line { stroke: #5aa9ef; stroke-width: 3; stroke-dasharray: 2 5; stroke-linecap: round; }
+.worldmap .edge.chosen .sea-line, .worldmap .edge.flown .sea-line { stroke-width: 4; }
+.worldmap .edge .km.sea { fill: #7fbdf2; }
+
+.dialog .torque-btn { margin-top: 10px; }
+
+/* ---- 整備士のおすすめセッティング（格納庫） ---- */
+.recommend { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.recommend-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.dialog .recommend-row .primary { flex: none; width: auto; margin: 0; padding: 8px 16px; }
+.dialog .recommend-why { margin-top: 0; align-items: flex-start; }
+.recommend-why ul { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 3px; }
+
+/* ---- コース選び ---- */
+.course-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 10px; }
+.course-card { display: flex; flex-direction: column; align-items: stretch; text-align: left; padding: 10px; gap: 8px; }
+.course-card.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(232, 163, 92, 0.4); }
+.course-card.practice { opacity: 0.85; }
+.course-card .worldmap.mini { height: 190px; max-height: 190px; pointer-events: none; }
+.worldmap.mini line, .worldmap.mini path, .worldmap.mini rect, .worldmap.mini circle { vector-effect: non-scaling-stroke; }
+.worldmap.mini .edge line { stroke-width: 2; }
+.worldmap.mini .edge .sea-line { stroke-width: 2.5; stroke-dasharray: 1 4; }
+.worldmap.mini .north { display: none; }
+.course-body { display: flex; flex-direction: column; gap: 4px; }
+.course-title { font-size: 1.05rem; }
+.course-level { color: #f2c94c; letter-spacing: 2px; font-size: 0.85rem; }
+.course-route { color: #cfd3d8; }
+.course-history { color: #9aa3ad; font-style: italic; border-left: 2px solid #4a5560; padding-left: 8px; }
+.course-head { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.course-head h2 { margin: 0; }
+.course-head button { flex: none; }
+.course-head + .lead { margin-top: 8px; }
+.dialog p.ok { color: var(--green); }
+.dialog p.ng { color: var(--red); }
 .dest-list { display: flex; flex-direction: column; gap: 6px; }
 .dest-list button { display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 8px 10px; gap: 2px; }
 .dest-list button.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(232, 163, 92, 0.4); }

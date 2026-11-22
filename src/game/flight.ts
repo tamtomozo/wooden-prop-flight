@@ -23,6 +23,7 @@ import {
 } from "../config";
 import { DIFFICULTY } from "../data/difficulty";
 import { equipmentKg } from "../data/equipment";
+import { seaAt } from "../data/world";
 import {
   boltLossPerHour,
   computePerformance,
@@ -162,6 +163,8 @@ export interface FlightState {
   difficulty: Difficulty;
   /** 雲の中で気づかないうちに入っている旋回降下の強さ 0..1（4.10・付録C） */
   spiral: number;
+  /** 海の上で、引き返し限界点を越えた（戻るだけの燃料がもうない） */
+  pastNoReturn: boolean;
   rng: () => number;
 }
 
@@ -191,8 +194,9 @@ export const distanceLeft = (s: FlightState) =>
   s.returning ? Math.max(0, s.distanceFlown) : Math.max(0, s.leg.distanceKm - s.distanceFlown);
 export const progress = (s: FlightState) => Math.min(1, Math.max(0, s.distanceFlown / s.leg.distanceKm));
 
-/** コース上のある地点の地面の標高（尾根を含む） */
+/** コース上のある地点の地面の標高（尾根を含む）。海の上は 0 m */
 export function terrainAt(leg: Leg, alongKm: number) {
+  if (seaAt(leg, alongKm)) return 0;
   const t = Math.min(1, Math.max(0, alongKm / leg.distanceKm));
   let h = leg.from.elevation + (leg.to.elevation - leg.from.elevation) * t;
   for (const r of leg.terrain) {
@@ -204,7 +208,35 @@ export function terrainAt(leg: Leg, alongKm: number) {
   return h;
 }
 export const groundElevation = (s: FlightState) => terrainAt(s.leg, s.distanceFlown);
+/** 今、海の上を飛んでいる（降りられる場所がない） */
+export const overSea = (s: Pick<FlightState, "leg" | "distanceFlown">) => seaAt(s.leg, s.distanceFlown);
 
+/**
+ * 今すぐ引き返したら、出発地に戻るのに要る燃料の見積もり（L）。
+ * 今の対気速度と燃料流量のまま、今の高さの風を背に受けて戻ったとして計算する。
+ */
+export function returnFuelNeeded(s: FlightState): number {
+  const back = s.returning ? distanceLeft(s) : s.distanceFlown;
+  const gs = Math.max(30, s.perf.airspeed + (s.returning ? -s.env.headwind : s.env.headwind));
+  return (back / gs) * s.perf.fuelBurn;
+}
+
+/**
+ * 引き返し限界点（出発地からの距離 km）。今の速さと燃料流量のまま進んだとき、
+ * そこで引き返せば予備燃料を残して出発地に戻れる、いちばん遠い地点。引き返している最中は null。
+ */
+export function noReturnKm(s: FlightState): number | null {
+  if (s.returning) return null;
+  const burn = s.perf.fuelBurn;
+  const go = s.perf.groundSpeed;
+  const back = s.perf.airspeed + s.env.headwind;
+  if (burn <= 0 || go <= 0 || back <= 0) return null;
+  const spare = (s.condition.fuelRemaining - RESERVE_FUEL_L) / burn; // 時間
+  return Math.max(0, (spare + s.distanceFlown / go) / (1 / go + 1 / back));
+}
+
+/** 戻るだけの燃料がある（予備燃料を残して） */
+export const canReturn = (s: FlightState) => s.condition.fuelRemaining - RESERVE_FUEL_L >= returnFuelNeeded(s);
 /** 今の高さでの外の気温と露点 */
 function airHere(s: FlightState) {
   const p = progress(s);
@@ -332,6 +364,7 @@ export function createFlight(init: FlightInit): FlightState {
     pending: [],
     difficulty: init.difficulty ?? "normal",
     spiral: 0,
+    pastNoReturn: false,
     stats: {
       zoneMinutes: { rich: 0, power: 0, economy: 0, tooLean: 0 },
       throttleMinutes: 0,
@@ -578,6 +611,7 @@ function substep(s: FlightState, dtMin: number): void {
   s.stats.maxVibration = Math.max(s.stats.maxVibration, a.vibration);
 
   discoverWeather(s);
+  watchNoReturn(s);
 
   const arrivedNow = !s.holding && (t === tArrive || distanceLeft(s) <= 1e-6);
   if (arrivedNow) {
@@ -606,6 +640,20 @@ function substep(s: FlightState, dtMin: number): void {
   } else if (t === tSunset || clockMin(s) >= s.sunsetMin) {
     s.status = "sunset";
   }
+}
+
+/**
+ * 引き返し限界点：海の上で、出発地に戻るだけの燃料がなくなったら一度だけ知らせる。
+ * 上昇中は燃料流量が多く見積もりがぶれるので、巡航に入ってから判断する。
+ */
+function watchNoReturn(s: FlightState) {
+  if (s.pastNoReturn || s.returning || s.phase !== "cruise" || !s.leg.sea.length) return;
+  if (canReturn(s)) return;
+  s.pastNoReturn = true;
+  s.alerts.push({
+    text: `引き返し限界点を越えた。もう${s.leg.from.name}へ戻る燃料はない。${s.leg.to.name}へ進むしかない`,
+    urgent: true,
+  });
 }
 
 /** 目で見える距離に入った予報項目を確かめる（実際にあるか、なかったか） */
@@ -676,6 +724,10 @@ function evaluateFlightBase(s: FlightState): FlightResult {
   const avgThrottle = s.elapsedMin > 0 ? s.stats.throttleMinutes / s.elapsedMin : 0;
   const richMostly = z.rich > s.elapsedMin * 0.5;
   const dest = destination(s);
+  // 海の上では降りる場所がない。着水して、船に助けられる
+  const sea = overSea(s);
+  const ditch = "海に着水した。通りかかった漁船に助けられたが、機体は波にのまれた";
+  const down = sea ? ditch : "畑に不時着した";
 
   switch (s.status) {
     case "arrived": {
@@ -705,8 +757,10 @@ function evaluateFlightBase(s: FlightState): FlightResult {
       return {
         success: false,
         title: "燃料切れ",
-        detail: `${dest.name}まであと ${left} km のところで燃料が尽き、畑に不時着した。`,
-        mechanic: richMostly
+        detail: `${dest.name}まであと ${left} km のところで燃料が尽き、${down}。`,
+        mechanic: sea && s.pastNoReturn
+          ? "海の上では、引き返し限界点を越える前に決めるんだ。燃料の残りと、戻るのに要る量を見比べろ。"
+          : richMostly
           ? "混合比が濃いままだったな。ちょうどよく薄くするだけで、燃費は2割近く良くなる。"
           : avgThrottle > 0.85
             ? "出力を上げすぎだ。向かい風の日は、速さより燃費を考えろ。"
@@ -716,7 +770,7 @@ function evaluateFlightBase(s: FlightState): FlightResult {
       return {
         success: false,
         title: "エンジン停止",
-        detail: `エンジンが傷んで止まってしまった。${dest.name}まであと ${left} km。`,
+        detail: `エンジンが傷んで止まってしまった。${dest.name}まであと ${left} km。${sea ? `${ditch}。` : ""}`,
         mechanic:
           s.stats.overspeedMinutes > 3
             ? "回転数がレッドラインを超えていた。降下や全開のときは回転計を見て絞れ。"
@@ -726,7 +780,9 @@ function evaluateFlightBase(s: FlightState): FlightResult {
       return {
         success: false,
         title: "日没",
-        detail: `${dest.name}まであと ${left} km のところで日が暮れた。暗くなる前に近くの原っぱへ降りた。`,
+        detail: sea
+          ? `${dest.name}まであと ${left} km の海の上で日が暮れた。暗い海では陸の方向もわからない。${ditch}。`
+          : `${dest.name}まであと ${left} km のところで日が暮れた。暗くなる前に近くの原っぱへ降りた。`,
         mechanic: "出発が遅かったか、絞りすぎた。日の入りに間に合わないなら、泊まって朝に出るのも正しい判断だ。",
       };
     case "propFailure":
@@ -734,27 +790,27 @@ function evaluateFlightBase(s: FlightState): FlightResult {
         ? {
             success: false,
             title: "プロペラが外れた",
-            detail: `ゆるんだボルトが抜け、プロペラが外れた。${dest.name}まであと ${left} km の畑に不時着した。`,
+            detail: `ゆるんだボルトが抜け、プロペラが外れた。${dest.name}まであと ${left} km。${down}。`,
             mechanic: "気候の違う土地に着いたら、まず締め直せ。木は湿気で縮んだりふくらんだりする。",
           }
         : {
             success: false,
             title: "プロペラが割れた",
-            detail: `強い振動が続いて、木のプロペラが割れた。${dest.name}まであと ${left} km の畑に不時着した。`,
+            detail: `強い振動が続いて、木のプロペラが割れた。${dest.name}まであと ${left} km。${down}。`,
             mechanic: "振動は総合的な警告だ。出たら原因を探せ。ボルトのゆるみか、前縁の傷か、着氷か。",
           };
     case "lostControl":
       return {
         success: false,
         title: "雲の中で迷った",
-        detail: `雲の中で上下がわからなくなり、気づいたら急な旋回降下に入っていた。なんとか雲の下に出て、畑に不時着した。`,
+        detail: `雲の中で上下がわからなくなり、気づいたら急な旋回降下に入っていた。なんとか雲の下に出て、${down}。`,
         mechanic: "計器飛行の訓練がないなら、雲には入るな。雲が低くなってきたら、早めに引き返せ。",
       };
     case "airframe":
       return {
         success: false,
         title: "機体が壊れた",
-        detail: `${s.env.cbDistance < 40 ? "積乱雲の近くの激しい揺れ" : "乱気流の中を速いまま飛んだ"}せいで、機体が傷んで飛べなくなった。畑に不時着した。`,
+        detail: `${s.env.cbDistance < 40 ? "積乱雲の近くの激しい揺れ" : "乱気流の中を速いまま飛んだ"}せいで、機体が傷んで飛べなくなった。${down}。`,
         mechanic:
           s.env.cbDistance < 40
             ? "積乱雲には近づくな。37 km 以上離れるか、消えるまで待て。"

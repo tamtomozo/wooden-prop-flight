@@ -52,7 +52,7 @@ function loadHtml(e: Equipment): string {
     <div class="eq-slots">${slots}</div>
     <div class="fd-head eq-kg"><span>重さ</span><span>${kg} / ${EQUIPMENT_MAX_KG} kg</span></div>
     <div class="eq-weight">${segs}</div>
-    <p class="fd-note">積めるのは<b>3つまで</b>、重さは<b>${EQUIPMENT_MAX_KG} kg まで</b>。重いほど離陸距離が伸びる（A2の図）。</p>
+    <p class="fd-note">積めるのは<b>3つまで</b>、重さは<b>${EQUIPMENT_MAX_KG} kg まで</b>。重いほど離陸距離が伸びる（燃料の量の図）。</p>
   </div>`;
 }
 

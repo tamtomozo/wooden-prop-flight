@@ -12,6 +12,7 @@ import {
   RESERVE_FUEL_L,
   SUNSET_MARGIN_MIN,
 } from "../config";
+import { terrainAt } from "../game/flight";
 import type { Forecast, Leg } from "../model/types";
 import { fogChance, headwindAt } from "../model/weather";
 
@@ -55,14 +56,14 @@ function profileSvg(i: LegProfileInput): string {
   const sx = (km: number) => X0 + ((X1 - X0) * Math.max(0, Math.min(D, km))) / D;
   const sy = (alt: number) => Y_BASE - ((Y_BASE - Y_TOP) * Math.max(0, Math.min(maxAlt, alt))) / maxAlt;
 
-  // 地面：出発地と着く先の標高をつなぎ、尾根を山形に足す
-  const ground = (km: number) => {
-    let h = leg.from.elevation + ((leg.to.elevation - leg.from.elevation) * km) / D;
-    for (const r of leg.terrain) {
-      if (km > r.fromKm && km < r.toKm) h = Math.max(h, h + (r.height - h) * Math.sin((Math.PI * (km - r.fromKm)) / (r.toKm - r.fromKm)));
-    }
-    return h;
-  };
+  // 地面：出発地と着く先の標高をつなぎ、尾根を山形に足す。海の上は 0 m
+  const ground = (km: number) => terrainAt(leg, km);
+  const sea = leg.sea
+    .map(
+      (r) => `<rect class="lp-sea" x="${sx(r.fromKm).toFixed(1)}" y="${Y_BASE - 5}" width="${(sx(r.toKm) - sx(r.fromKm)).toFixed(1)}" height="5" />
+      <text class="lp-t lp-sea-t" x="${sx((r.fromKm + r.toKm) / 2).toFixed(1)}" y="${Y_BASE - 9}" text-anchor="middle">海の上 ${r.toKm - r.fromKm} km（降りられない）</text>`,
+    )
+    .join("");
   const N = 120;
   const pts = Array.from({ length: N + 1 }, (_, k) => (D * k) / N);
   const groundPath = `M${sx(0)},${Y_BASE} ${pts.map((km) => `L${sx(km).toFixed(1)},${sy(ground(km)).toFixed(1)}`).join(" ")} L${sx(D)},${Y_BASE} Z`;
@@ -166,6 +167,7 @@ function profileSvg(i: LegProfileInput): string {
     ${frz}
     ${wx.join("")}
     <path class="lp-ground" d="${groundPath}" />
+    ${sea}
     ${leg.terrain.map((r) => `<text class="lp-t lp-ridge-t" x="${sx((r.fromKm + r.toKm) / 2)}" y="${sy(r.height) - 4}" text-anchor="middle">${r.name} ${r.height} m</text>`).join("")}
     <path class="lp-path" d="${path}" />
     <text class="lp-t lp-path-t" x="${sx(climbKm) + 4}" y="${sy(cruise) - 4}">すすめの巡航高度 ${cruise} m</text>

@@ -6,7 +6,7 @@
 //   海沿い   みなみ → はまかぜ → ぬまた → きた（山も積乱雲もないが遠い。海霧と向かい風）
 //
 // 天気のひな形と山の位置は、道の a → b の向きで書く。逆向きに飛ぶときは反転する（legBetween）。
-import type { Edge, Leg, Ridge, Waypoint, WeatherFeature, WeatherTemplate, World } from "../model/types";
+import type { Edge, Leg, Ridge, SeaStretch, Waypoint, WeatherFeature, WeatherTemplate, World } from "../model/types";
 import { headwindAt } from "../model/weather";
 
 const minami: Waypoint = {
@@ -338,7 +338,12 @@ const EDGES: Edge[] = [
 ];
 
 export const WORLD: World = {
+  id: "hondo",
+  title: "陸の旅（練習）",
   name: "みなみ → きた",
+  description: "陸の上だけを飛ぶ練習のコース。山越え・峠・海沿いの3つの道。どこで止まっても、畑に降りられる。",
+  history: "海を渡る前に、まずは陸の上で、燃料・風・天気・プロペラの扱いに慣れよう。",
+  level: 1,
   fields: [minami, kawara, hamakaze, touge, takane, numata, kita],
   edges: EDGES,
   startId: "minami",
@@ -388,8 +393,53 @@ export function legBetween(w: World, from: string, to: string): Leg {
     note: e.note,
     terrain,
     weather,
+    sea: seaStretches(w, from, to, D),
   };
 }
+
+// ---- 陸と海 ----
+/** 点が多角形の中にあるか（レイキャスティング） */
+function inPolygon(x: number, y: number, poly: [number, number][]) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** 地図の上のその点が陸か。陸地の形が書いていない地図は、全部が陸 */
+export const isLand = (w: World, x: number, y: number) => !w.land || w.land.some((p) => inPolygon(x, y, p));
+
+/** from → to をまっすぐ飛んだときの、海の上の範囲（出発地からの距離 km、1 km きざみ） */
+export function seaStretches(w: World, from: string, to: string, D = edgeDistance(w, findEdge(w, from, to)!)): SeaStretch[] {
+  if (!w.land) return [];
+  const a = field(w, from);
+  const b = field(w, to);
+  const out: SeaStretch[] = [];
+  let start: number | null = null;
+  for (let km = 0; km <= D; km++) {
+    const t = km / D;
+    const sea = !isLand(w, a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t);
+    if (sea && start === null) start = km;
+    if (!sea && start !== null) {
+      out.push({ fromKm: start, toKm: km });
+      start = null;
+    }
+  }
+  if (start !== null) out.push({ fromKm: start, toKm: D });
+  return out;
+}
+
+/** 区間のその地点が海の上か */
+export const seaAt = (leg: Pick<Leg, "sea">, km: number) => leg.sea.some((r) => km > r.fromKm && km < r.toKm);
+
+/** 区間のうち、海の上を飛ぶ距離 km */
+export const seaKm = (leg: Pick<Leg, "sea">) => leg.sea.reduce((s, r) => s + r.toKm - r.fromKm, 0);
+
+/** いちばん長く続く海の上の距離 km */
+export const longestSeaKm = (leg: Pick<Leg, "sea">) => Math.max(0, ...leg.sea.map((r) => r.toKm - r.fromKm));
 
 /** 逆向きに飛ぶときの天気：距離は D から数え直し、左右は入れ替わり、風は反対から吹く */
 function reverseWeather(t: WeatherTemplate, D: number): WeatherTemplate {

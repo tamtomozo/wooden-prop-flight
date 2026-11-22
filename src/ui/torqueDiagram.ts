@@ -1,7 +1,5 @@
 // A3 ボルトの締め付けを図で説明する（格納庫）。
-// ・トルクの物差し：ミニゲームと同じ「適正」の範囲
 // ・断面図：ボルトが木のハブを金属の板ではさむ様子を、ゆるい／適正／締めすぎで並べる
-import { TORQUE_OK_FROM as OK_FROM, TORQUE_OK_TO as OK_TO } from "../config";
 import { INSTALL_FACTOR } from "../model/physics";
 import type { TorqueResult } from "../model/types";
 
@@ -49,12 +47,6 @@ export function torqueDiagramHtml(result: TorqueResult | null): string {
     </div>`,
   ).join("");
   return `<div class="torque-diagram">
-    <div class="td-scale-wrap">
-      <div class="td-scale">
-        <span class="td-band" style="left:${OK_FROM}%;width:${OK_TO - OK_FROM}%">カチッ</span>
-      </div>
-      <div class="tq-scale"><span>← ゆるい</span><span>トルク（締める強さ）</span><span>締めすぎ →</span></div>
-    </div>
     <div class="td-cards">${cards}</div>
     <p class="fd-note">木は湿気を吸ったり乾いたりして厚みが変わる。湿度の違う飛行場に着くとボルトがゆるむので、経由地で締め直す。</p>
   </div>`;

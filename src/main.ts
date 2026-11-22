@@ -1,10 +1,12 @@
 import "./style.css";
-import { GAME_MINUTES_PER_SECOND, HASTE_RELIEF } from "./config";
+import { GAME_MINUTES_PER_SECOND, HASTE_RELIEF, RESERVE_FUEL_L } from "./config";
 import { DIFFICULTY } from "./data/difficulty";
 import { NO_EQUIPMENT } from "./data/equipment";
-import { field, legBetween, WORLD } from "./data/world";
+import { courseById } from "./data/courses";
+import { field, legBetween, seaKm } from "./data/world";
 import {
   beginLeg,
+  canRecoverWithSpare,
   finishLeg,
   isFinished,
   newCondition,
@@ -16,6 +18,7 @@ import {
 } from "./game/campaign";
 import { evaluateTrip } from "./game/evaluation";
 import {
+  canReturn,
   clockMin,
   createFlight,
   evaluateFlight,
@@ -23,6 +26,7 @@ import {
   intendedLateral,
   requestControls,
   requestLateral,
+  returnFuelNeeded,
   setControls,
   stepFlight,
   turnBack,
@@ -30,13 +34,13 @@ import {
   type FlightState,
 } from "./game/flight";
 import { createRng } from "./model/physics";
-import type { Setup } from "./model/types";
+import type { Setup, World } from "./model/types";
+import { showCourseSelect } from "./ui/courseSelect";
 import { closeDialog, fmtDuration, mechanicLine, openDialog, setActions } from "./ui/dialog";
 import { inspectionHtml } from "./ui/inspection";
 import { showHangar } from "./ui/hangar";
 import { CockpitPanel, fmtClock, PHASE_LABEL } from "./ui/panel";
 import { RouteBar } from "./ui/routeBar";
-import { SideScene } from "./ui/scene";
 import { BackScene } from "./ui/scene3d";
 import { Sound } from "./ui/sound";
 import { showWaypoint, type ArrivalInfo } from "./ui/waypoint";
@@ -44,7 +48,15 @@ import { showWaypoint, type ArrivalInfo } from "./ui/waypoint";
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 // ---- 状態 ----
-const world = WORLD;
+const COURSE_KEY = "plane.course";
+let savedCourse: string | null = null;
+try {
+  savedCourse = localStorage.getItem(COURSE_KEY);
+} catch {
+  /* 読めなければ最初のコース */
+}
+/** 選んでいるコース（旅の舞台） */
+let world: World = courseById(savedCourse ?? "");
 let campaign: CampaignState | null = null;
 /** 区間を出発する直前の状態（「この区間をやり直す」用） */
 let legStart: CampaignState | null = null;
@@ -71,42 +83,15 @@ function previewFlight(): FlightState {
   });
 }
 
-// ---- 視点（後ろからの3D／横からの2D） ----
-type View = "back" | "side";
-const VIEW_KEY = "plane.view";
-const sideCanvas = $<HTMLCanvasElement>("#scene");
-const backCanvas = $<HTMLCanvasElement>("#scene3d");
-const viewBtn = $<HTMLButtonElement>("#view");
-const sideScene = new SideScene(sideCanvas);
+// ---- 景色（機体を後ろから追いかける3D） ----
 const routeBar = new RouteBar($<HTMLCanvasElement>("#routebar"));
 let backScene: BackScene | null = null;
 try {
-  backScene = new BackScene(backCanvas);
+  backScene = new BackScene($<HTMLCanvasElement>("#scene3d"));
 } catch {
-  // WebGL が使えない環境では横の視点だけにする
-  viewBtn.hidden = true;
+  // WebGL が使えない環境では景色を出さない（計器とルートバーだけで飛べる）
+  $(".stage").insertAdjacentHTML("afterbegin", `<p class="no-webgl">この環境では3Dの景色を表示できません（WebGL が使えません）。計器とルートバーで飛べます。</p>`);
 }
-let view: View = "side";
-
-function setView(v: View) {
-  view = backScene ? v : "side";
-  backCanvas.hidden = view !== "back";
-  sideCanvas.hidden = view !== "side";
-  viewBtn.textContent = view === "back" ? "視点：後ろ" : "視点：横";
-  try {
-    localStorage.setItem(VIEW_KEY, view);
-  } catch {
-    /* 保存できなくても遊べる */
-  }
-}
-viewBtn.addEventListener("click", () => setView(view === "back" ? "side" : "back"));
-let savedView: string | null = null;
-try {
-  savedView = localStorage.getItem(VIEW_KEY);
-} catch {
-  /* 読めなければ初期値 */
-}
-setView(savedView === "side" ? "side" : "back");
 
 const throttleInput = $<HTMLInputElement>("#throttle");
 const mixtureInput = $<HTMLInputElement>("#mixture");
@@ -136,7 +121,6 @@ try {
 setSound(soundPref !== "off");
 soundBtn.addEventListener("click", () => setSound(!sound.isEnabled()));
 for (const ev of ["pointerdown", "keydown"]) window.addEventListener(ev, () => sound.ensure());
-$("#sunset").textContent = fmtClock(world.sunsetMin);
 
 function updateHud() {
   const f = flight;
@@ -171,9 +155,6 @@ window.addEventListener("keydown", (e) => {
   const t = Math.round(want.throttle * 100);
   const m = want.mixture;
   switch (e.key.toLowerCase()) {
-    case "v":
-      setView(view === "back" ? "side" : "back");
-      return;
     case "r":
       nav("alt-up");
       break;
@@ -254,9 +235,21 @@ document.querySelectorAll<HTMLElement>("[data-nav]").forEach((b) => b.addEventLi
 function confirmTurnBack() {
   setPaused(true);
   const f = flight;
+  const need = returnFuelNeeded(f);
+  // 海の上の区間では、戻るだけの燃料があるかを見せる（引き返し限界点）
+  const fuelCheck = f.leg.sea.length
+    ? `<p class="${canReturn(f) ? "ok" : "ng"}">戻るのに要る燃料の見積もり：約 ${need.toFixed(0)} L（予備 ${RESERVE_FUEL_L} L は別）。${
+        canReturn(f)
+          ? "まだ戻れる。"
+          : f.condition.fuelRemaining >= need
+            ? "戻れても、予備燃料はほとんど残らない。"
+            : "<b>引き返し限界点を越えている。戻る途中で燃料が尽きる。</b>"
+      }</p>`
+    : "";
   openDialog(
     `<h2>引き返しますか？</h2>
     <p>180度旋回して、${f.leg.from.name}へ戻ります。ここまで ${f.distanceFlown.toFixed(0)} km 飛んできた。燃料は ${f.condition.fuelRemaining.toFixed(1)} L。</p>
+    ${fuelCheck}
     <p class="small">勇気ある撤退：焦りが ${HASTE_RELIEF} 下がり、最後の評価でボーナスがつく。</p>
     ${mechanicLine("一番大事なのは引き返す勇気だ。降りて待つのも正しい判断だぞ。")}
     <div class="buttons-row">
@@ -330,18 +323,38 @@ function toast(lines: string[]) {
   toastTimer = window.setTimeout(() => (el.hidden = true), 6000);
 }
 
-// ---- 流れ：格納庫 → 区間 → 経由地 → … → 目的地 ----
+// ---- 流れ：コース → 格納庫 → 区間 → 経由地 → … → 目的地 ----
+function chooseCourse() {
+  running = false;
+  campaign = null;
+  legStart = null;
+  showCourseSelect((w) => {
+    world = w;
+    try {
+      localStorage.setItem(COURSE_KEY, w.id);
+    } catch {
+      /* 保存できなくても遊べる */
+    }
+    goHangar();
+  }, world.id);
+}
+
 function goHangar() {
   running = false;
   campaign = null;
   legStart = null;
   flight = previewFlight();
+  $("#sunset").textContent = fmtClock(world.sunsetMin);
   applyControls(75, 0, true);
-  showHangar(world, (setup, difficulty, destination) => {
-    campaign = startCampaign(world, setup, Date.now(), difficulty, destination);
-    cockpit.setDifficulty(difficulty);
-    departLeg();
-  });
+  showHangar(
+    world,
+    (setup, difficulty, destination) => {
+      campaign = startCampaign(world, setup, Date.now(), difficulty, destination);
+      cockpit.setDifficulty(difficulty);
+      departLeg();
+    },
+    chooseCourse,
+  );
 }
 
 function departLeg() {
@@ -369,7 +382,7 @@ function onFlightEnded() {
     else showFieldScreen(arrival);
     return;
   }
-  if (f.status === "propFailure" && c.spareAvailable) {
+  if (canRecoverWithSpare(c, f)) {
     const r = evaluateFlight(f);
     openDialog(
       `<h2 class="ng">${r.title}</h2>
@@ -438,9 +451,12 @@ function showFinal() {
   const flown = c.records.filter((r) => !r.returned);
   const path = [world.startId, ...flown.map((r) => r.leg.to.id)].map((id) => field(world, id).name.replace("飛行場", ""));
   const ev = evaluateTrip(c);
+  const seaFlown = flown.reduce((s, r) => s + seaKm(r.leg), 0);
   openDialog(
     `<h2 class="ok">${dest.name}に到着！</h2>
-    <p>${path.join(" → ")}、${flown.length}区間・${flown.reduce((s, r) => s + r.leg.distanceKm, 0)} km の旅を終えた。</p>
+    <p><b>${world.title}</b>：${path.join(" → ")}、${flown.length}区間・${flown.reduce((s, r) => s + r.leg.distanceKm, 0)} km の旅を終えた。${
+      seaFlown > 0 ? `そのうち海の上は ${seaFlown} km。` : ""
+    }</p>
     <div class="rank rank-${ev.rank}">
       <span class="rank-letter">${ev.rank}</span>
       <span><b>${ev.title}</b><br /><span class="rank-total">${ev.total} 点 / 100</span></span>
@@ -471,10 +487,13 @@ function showFinal() {
     ${inspectionHtml(c.condition, { details: showDetails, plain: DIFFICULTY[c.difficulty].plainInstruments })}
     <ul>${c.events.map((e) => `<li>${e}</li>`).join("")}</ul>
     ${mechanicLine("おつかれさん。帰ったら、トルク・傷・バランスを点検しておこう。")}
-    <button class="primary" data-act="again">格納庫からもう一度</button>`,
+    <div class="buttons-row">
+      <button data-act="courses">別のコースを選ぶ</button>
+      <button class="primary" data-act="again">格納庫からもう一度</button>
+    </div>`,
     { wide: true },
   );
-  setActions({ again: goHangar });
+  setActions({ again: goHangar, courses: chooseCourse });
 }
 
 // ---- ループ ----
@@ -490,11 +509,10 @@ function frame(now: number) {
   }
   updateHud();
   sound.update(flight, active);
-  if (view === "back" && backScene) backScene.draw(flight, realDt, active);
-  else sideScene.draw(flight, realDt, active);
+  backScene?.draw(flight, realDt, active);
   routeBar.draw(flight);
   requestAnimationFrame(frame);
 }
 
-goHangar();
+chooseCourse();
 requestAnimationFrame(frame);
