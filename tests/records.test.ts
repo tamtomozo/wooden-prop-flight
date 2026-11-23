@@ -154,6 +154,8 @@ describe("最後の画面：次にすること", () => {
         tsuranari: { rank: "B", total: 55, day: 2 },
         owadatsumi: { rank: "A", total: 72, day: 1 },
         shirogane: { rank: "S", total: 88, day: 1 },
+        kumoji: { rank: "A", total: 80, day: 1 },
+        haruka: { rank: "S", total: 86, day: 2 },
       },
       achievements: [],
     };

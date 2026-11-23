@@ -1,4 +1,4 @@
-// コース：最初に選ぶ旅の舞台。陸路では行けない、架空の海峡・諸島・大洋と、高い山脈を飛びこえる。
+// コース：最初に選ぶ旅の舞台。陸路では行けない、架空の海峡・諸島・大洋と、高い山脈、その両方を飛びこえる。
 // どれも史実の挑戦をもとにしているが、地名と地形は架空。
 //
 //   チュートリアル … 本土の地図（world.ts）から切り出した、海ルートと山ルート。飛行中に止めて計器と操作を説明する
@@ -6,6 +6,10 @@
 //   つらなり諸島 … 1919年 NC-4 の大西洋横断（島から島へ、何日もかけて）
 //   おおわだつみ … 1919年 アルコックとブラウン・1927年 リンドバーグの無着陸横断（長い海の上を一気に）
 //   しろがね山脈 … 1910年 チャベスのアルプス越え・1918年 ゴドイのアンデス越え（海はなく、高い山なみ）
+//   くもじ峠と島 … 1930年 エイミー・ジョンソンの英豪飛行（山を越えてから、海を渡る）
+//   はるか海と山脈 … 1930年 メルモーズの南大西洋横断と、ギヨメのアンデス越え（長い海のあとに、高い山）
+//
+// 海と山が両方あるコースでは、プロペラのピッチ（旅のあいだ替えられない）をどちらに合わせるかが悩みどころ。
 //
 // 天気のひな形と山の位置は world.ts と同じく、道の a → b の向きで書く。
 // 海の上かどうかは、陸地の形（land）から自動で決まる。
@@ -1082,6 +1086,644 @@ export const SHIROGANE: World = {
 };
 
 // =====================================================================
+// 5. くもじ峠を越えて島へ（山を越えてから、海を渡る）
+// =====================================================================
+const KUMOJI_FIELDS: Waypoint[] = [
+  {
+    id: "akeno",
+    name: "あけの飛行場",
+    elevation: 150,
+    runwayLength: 750,
+    surface: "paved",
+    hasRepairShop: true,
+    humidity: 65,
+    temperature: 25,
+    dewPoint: 15,
+    description: "山なみの西のふもとの町。格納庫と整備場がある。島は、山の向こうの海のさらに先だ。",
+    x: 0,
+    y: 0,
+    labelSide: "left",
+  },
+  {
+    id: "yamaai",
+    name: "やまあい飛行場",
+    elevation: 850,
+    runwayLength: 520,
+    surface: "unpaved",
+    hasRepairShop: false,
+    humidity: 76,
+    temperature: 21,
+    dewPoint: 14,
+    description: "前山と主稜にはさまれた谷の村の草地。整備場はない。出てすぐ、くもじ峠の上り。",
+    x: 70,
+    y: 95,
+    labelSide: "left",
+  },
+  {
+    id: "urano",
+    name: "うらの飛行場",
+    elevation: 20,
+    runwayLength: 700,
+    surface: "paved",
+    hasRepairShop: true,
+    humidity: 80,
+    temperature: 25,
+    dewPoint: 19,
+    description: "山なみの東の港町。整備場がある。ここから先は海。朝は沖に霧が出やすい。",
+    x: 175,
+    y: 110,
+    labelSide: "left",
+  },
+  {
+    id: "minamiura",
+    name: "みなみうら飛行場",
+    elevation: 30,
+    runwayLength: 650,
+    surface: "paved",
+    hasRepairShop: true,
+    humidity: 78,
+    temperature: 26,
+    dewPoint: 19,
+    description: "山なみの南のはしの浜の町。整備場がある。山を避けるなら、ここから回りこむか、海へ出る。",
+    x: 90,
+    y: -100,
+    labelSide: "left",
+  },
+  {
+    id: "kobato",
+    name: "こばと島飛行場",
+    elevation: 15,
+    runwayLength: 460,
+    surface: "unpaved",
+    hasRepairShop: false,
+    humidity: 88,
+    temperature: 24,
+    dewPoint: 19.5,
+    description: "南の海に浮かぶ小さな島。整備場はなく、滑走路は短い。重いままでは飛び立てない。朝は霧に隠れやすい。",
+    x: 255,
+    y: 40,
+    labelSide: "right",
+  },
+  {
+    id: "akane",
+    name: "あかね島飛行場",
+    elevation: 40,
+    runwayLength: 650,
+    surface: "paved",
+    hasRepairShop: true,
+    humidity: 74,
+    temperature: 24,
+    dewPoint: 16,
+    description: "海の向こうの島の町。山を越え、海を渡りきったゴール。",
+    x: 330,
+    y: 175,
+    labelSide: "right",
+  },
+];
+
+const KUMOJI_EDGES: Edge[] = [
+  {
+    a: "akeno",
+    b: "yamaai",
+    cruiseAltitude: 1900,
+    note: "前山を越えて谷の村へ。午後は谷を吹き上がる風で揺れる。",
+    terrain: [{ fromKm: 40, toKm: 85, height: 1500, name: "前山" }],
+    weather: {
+      winds: winds(40, [10, 15, 25, 30]),
+      freezingLevel: 3600,
+      features: [
+        {
+          id: "ay-thermal",
+          kind: "turbulence",
+          prob: { morning: 0.2, afternoon: 0.6 },
+          turbulence: { fromKm: 30, toKm: 100, lateralKm: 0, halfWidthKm: 30, intensity: 1 },
+        },
+        {
+          id: "ay-valleyfog",
+          kind: "cloud",
+          prob: { morning: 0.4, afternoon: 0.1 },
+          cloud: { fromKm: 95, toKm: 118, lateralKm: 0, halfWidthKm: 20, base: 800, top: 1200 },
+        },
+      ],
+    },
+  },
+  {
+    a: "yamaai",
+    b: "urano",
+    cruiseAltitude: 2900,
+    note: "くもじ峠を越えて、東の海へ下る。谷を出てすぐ 2500 m の急な上り。巡航型のプロペラでは上昇が間に合わない。峠は午後に雲で隠れやすい。",
+    terrain: [{ fromKm: 3, toKm: 42, height: 2500, name: "くもじ峠" }],
+    weather: {
+      winds: winds(70, [10, 20, 30, 35]),
+      freezingLevel: 3500,
+      features: [
+        {
+          id: "yu-cap",
+          kind: "cloud",
+          prob: { morning: 0.3, afternoon: 0.7 },
+          cloud: { fromKm: 12, toKm: 38, lateralKm: 0, halfWidthKm: 18, base: 2300, top: 3500 },
+        },
+        {
+          id: "yu-wave",
+          kind: "turbulence",
+          prob: { morning: 0.4, afternoon: 0.7 },
+          turbulence: { fromKm: 30, toKm: 80, lateralKm: 0, halfWidthKm: 30, intensity: 2 },
+        },
+      ],
+    },
+  },
+  {
+    a: "akeno",
+    b: "urano",
+    cruiseAltitude: 3000,
+    note: "あおがね岳の横をまっすぐ越えて、東の海へ。いちばん近いが、峰は 2600 m。午後は積乱雲が育つ。",
+    terrain: [
+      { fromKm: 40, toKm: 80, height: 1600, name: "前山" },
+      { fromKm: 100, toKm: 160, height: 2600, name: "あおがね岳" },
+    ],
+    weather: {
+      winds: winds(60, [10, 20, 30, 40]),
+      freezingLevel: 3300,
+      features: [
+        {
+          id: "au-cap",
+          kind: "cloud",
+          prob: { morning: 0.4, afternoon: 0.8 },
+          cloud: { fromKm: 110, toKm: 150, lateralKm: 0, halfWidthKm: 20, base: 2400, top: 3800 },
+        },
+        {
+          id: "au-wave",
+          kind: "turbulence",
+          prob: { morning: 0.5, afternoon: 0.8 },
+          turbulence: { fromKm: 140, toKm: 200, lateralKm: 0, halfWidthKm: 35, intensity: 2 },
+        },
+        {
+          id: "au-cb",
+          kind: "cb",
+          prob: { morning: 0.1, afternoon: 0.5 },
+          cb: { alongKm: 130, lateralKm: 9, radiusKm: 5 },
+        },
+      ],
+    },
+  },
+  {
+    a: "akeno",
+    b: "minamiura",
+    cruiseAltitude: 1200,
+    note: "山なみのすそを南東へ、浜の町まで。山はない。横風。",
+    terrain: [],
+    weather: {
+      winds: winds(80, [10, 15, 20, 25]),
+      freezingLevel: 4000,
+      features: [
+        {
+          id: "am-thermal",
+          kind: "turbulence",
+          prob: { morning: 0.2, afternoon: 0.5 },
+          turbulence: { fromKm: 20, toKm: 110, lateralKm: 0, halfWidthKm: 30, intensity: 1 },
+        },
+      ],
+    },
+  },
+  {
+    a: "minamiura",
+    b: "urano",
+    cruiseAltitude: 1500,
+    note: "山なみの南のはしの丘を回りこんで、海沿いを北へ。山は低いが遠い。向かい風。",
+    terrain: [{ fromKm: 60, toKm: 130, height: 1000, name: "南のはしの丘" }],
+    weather: {
+      winds: winds(10, [15, 20, 25, 30]),
+      freezingLevel: 3800,
+      features: [
+        {
+          id: "mu-shower",
+          kind: "rain",
+          prob: { morning: 0.3, afternoon: 0.4 },
+          cloud: { fromKm: 150, toKm: 210, lateralKm: 0, halfWidthKm: 20, base: 900, top: 2400 },
+          rain: { fromKm: 155, toKm: 205, lateralKm: 0, halfWidthKm: 16, intensity: 1 },
+        },
+      ],
+    },
+  },
+  {
+    a: "minamiura",
+    b: "kobato",
+    cruiseAltitude: 1500,
+    note: "山を避けて、浜から小島まで海の上を北東へ。海の上は 130 km。朝は島のまわりに低い雲。",
+    terrain: [],
+    weather: {
+      winds: winds(30, [15, 20, 25, 30]),
+      freezingLevel: 4000,
+      features: [
+        {
+          id: "mk2-stratus",
+          kind: "cloud",
+          prob: { morning: 0.5, afternoon: 0.2 },
+          cloud: { fromKm: 150, toKm: 216, lateralKm: 0, halfWidthKm: 30, base: 200, top: 900 },
+        },
+        {
+          id: "mk2-squall",
+          kind: "rain",
+          prob: { morning: 0.2, afternoon: 0.5 },
+          cloud: { fromKm: 100, toKm: 150, lateralKm: 5, halfWidthKm: 18, base: 900, top: 2600 },
+          rain: { fromKm: 105, toKm: 145, lateralKm: 5, halfWidthKm: 15, intensity: 1 },
+        },
+      ],
+    },
+  },
+  {
+    a: "urano",
+    b: "akane",
+    cruiseAltitude: 1500,
+    note: "港からまっすぐ島へ海を渡る。海の上は 130 km ほど。朝は海霧、午後はにわか雨。",
+    terrain: [],
+    weather: {
+      winds: winds(70, [15, 25, 30, 35]),
+      freezingLevel: 4000,
+      features: [
+        {
+          id: "ua-fog",
+          kind: "cloud",
+          prob: { morning: 0.6, afternoon: 0.2 },
+          cloud: { fromKm: 10, toKm: 110, lateralKm: 0, halfWidthKm: 30, base: 100, top: 700 },
+        },
+        {
+          id: "ua-squall",
+          kind: "rain",
+          prob: { morning: 0.2, afternoon: 0.5 },
+          cloud: { fromKm: 80, toKm: 130, lateralKm: -5, halfWidthKm: 18, base: 900, top: 2500 },
+          rain: { fromKm: 85, toKm: 125, lateralKm: -5, halfWidthKm: 15, intensity: 1 },
+        },
+      ],
+    },
+  },
+  {
+    a: "kobato",
+    b: "akane",
+    cruiseAltitude: 1200,
+    note: "小島から北へ、島の町まで海を渡る。海の上は 120 km ほど。ときどきにわか雨。島の手前は揺れる。",
+    terrain: [],
+    weather: {
+      winds: winds(60, [15, 20, 25, 30]),
+      freezingLevel: 4000,
+      features: [
+        {
+          id: "ka2-shower",
+          kind: "rain",
+          prob: { morning: 0.3, afternoon: 0.4 },
+          cloud: { fromKm: 35, toKm: 80, lateralKm: 0, halfWidthKm: 16, base: 800, top: 2300 },
+          rain: { fromKm: 40, toKm: 75, lateralKm: 0, halfWidthKm: 12, intensity: 1 },
+        },
+        {
+          id: "ka2-gust",
+          kind: "turbulence",
+          prob: { morning: 0.2, afternoon: 0.5 },
+          turbulence: { fromKm: 120, toKm: 154, lateralKm: 0, halfWidthKm: 20, intensity: 1 },
+        },
+      ],
+    },
+  },
+];
+
+export const KUMOJI: World = {
+  id: "kumoji",
+  title: "くもじ峠を越えて島へ",
+  name: "あけの → あかね島",
+  description:
+    "まず山を越え、それから海を渡る。山の上は空気が薄く、海の上は降りる場所がない。峠を越えるか、峰の横をまっすぐ越えるか、山を避けて南の浜から小島づたいに長い海を渡るか。",
+  history:
+    "1930年、エイミー・ジョンソンはひとりで、イギリスからオーストラリアまで飛んだ。トルコの山脈では雲の中で谷を縫い、最後は広いティモール海を渡った。",
+  level: 2,
+  fields: KUMOJI_FIELDS,
+  edges: KUMOJI_EDGES,
+  startId: "akeno",
+  goalId: "akane",
+  fuelCapacityL: 80,
+  startMin: 8 * 60,
+  sunsetMin: 18 * 60,
+  planSpeedKmh: 110,
+  land: [
+    // 本土（東の海岸に うらの、南の浜に みなみうら）
+    [
+      [-200, -200],
+      [60, -200],
+      [80, -130],
+      [105, -118],
+      [125, -95],
+      [148, -45],
+      [168, -5],
+      [186, 40],
+      [186, 100],
+      [182, 130],
+      [190, 180],
+      [186, 300],
+      [-200, 300],
+    ],
+    island(255, 40, 8),
+    island(330, 175, 24, 1.1),
+  ],
+};
+
+// =====================================================================
+// 6. はるか海を渡り、ゆきがね山脈を越える（長い海のあとに、高い山）
+// =====================================================================
+const HARUKA_FIELDS: Waypoint[] = [
+  {
+    id: "nishinominato",
+    name: "にしのみなと飛行場",
+    elevation: 20,
+    runwayLength: 1000,
+    surface: "paved",
+    hasRepairShop: true,
+    humidity: 72,
+    temperature: 26,
+    dewPoint: 18,
+    description: "西の大陸の港の飛行場。滑走路は長い。海の向こうの大陸の、さらに山の向こうへ郵便を届ける。",
+    x: 0,
+    y: 0,
+    labelSide: "left",
+  },
+  {
+    id: "nakanoshima",
+    name: "なかのしま飛行場",
+    elevation: 30,
+    runwayLength: 470,
+    surface: "unpaved",
+    hasRepairShop: false,
+    humidity: 86,
+    temperature: 25,
+    dewPoint: 20,
+    description: "海のまん中の島の草地。整備場はなく、滑走路は短い。重いままでは飛び立てない。",
+    x: -60,
+    y: 210,
+    labelSide: "left",
+  },
+  {
+    id: "mukouhama",
+    name: "むこうはま飛行場",
+    elevation: 15,
+    runwayLength: 800,
+    surface: "paved",
+    hasRepairShop: true,
+    humidity: 80,
+    temperature: 24,
+    dewPoint: 18,
+    description: "東の大陸の浜の町。整備場がある。すぐうしろに、雪をかぶったゆきがね山脈がそびえる。",
+    x: 40,
+    y: 420,
+    labelSide: "right",
+  },
+  {
+    id: "sawabe",
+    name: "さわべ飛行場",
+    elevation: 400,
+    runwayLength: 600,
+    surface: "unpaved",
+    hasRepairShop: true,
+    humidity: 70,
+    temperature: 22,
+    dewPoint: 13,
+    description: "山脈の西のすその村。小さな整備小屋がある。ここから越える峠は、山脈でいちばん低い。",
+    x: -70,
+    y: 470,
+    labelSide: "left",
+  },
+  {
+    id: "takamachi",
+    name: "たかまち飛行場",
+    elevation: 1200,
+    runwayLength: 750,
+    surface: "paved",
+    hasRepairShop: true,
+    humidity: 50,
+    temperature: 19,
+    dewPoint: 6,
+    description: "山脈の向こうの高原の町。海と山を越えきったゴール。",
+    x: 90,
+    y: 570,
+    labelSide: "right",
+  },
+];
+
+const HARUKA_EDGES: Edge[] = [
+  {
+    a: "nishinominato",
+    b: "mukouhama",
+    cruiseAltitude: 1500,
+    note: "まっすぐ海を渡る。海の上は 370 km。どの高さでも向かい風で、低いほど弱い。満タンでも、上昇型のプロペラでは燃料が心もとない。",
+    terrain: [],
+    weather: {
+      winds: winds(15, [25, 30, 35, 40]),
+      freezingLevel: 4000,
+      features: [
+        {
+          id: "nm2-squall",
+          kind: "rain",
+          prob: { morning: 0.4, afternoon: 0.5 },
+          cloud: { fromKm: 170, toKm: 240, lateralKm: 0, halfWidthKm: 30, base: 900, top: 3000 },
+          rain: { fromKm: 180, toKm: 230, lateralKm: 0, halfWidthKm: 25, intensity: 1 },
+        },
+        {
+          id: "nm2-cb",
+          kind: "cb",
+          prob: { morning: 0.2, afternoon: 0.5 },
+          cb: { alongKm: 260, lateralKm: -7, radiusKm: 6 },
+        },
+        {
+          id: "nm2-coast",
+          kind: "cloud",
+          prob: { morning: 0.4, afternoon: 0.2 },
+          cloud: { fromKm: 360, toKm: 422, lateralKm: 0, halfWidthKm: 30, base: 300, top: 1000 },
+        },
+      ],
+    },
+  },
+  {
+    a: "nishinominato",
+    b: "nakanoshima",
+    cruiseAltitude: 1200,
+    note: "海のまん中の島へ。海の上は 190 km。朝は低い雲。",
+    terrain: [],
+    weather: {
+      winds: winds(10, [10, 15, 20, 25]),
+      freezingLevel: 4200,
+      features: [
+        {
+          id: "nn-stratus",
+          kind: "cloud",
+          prob: { morning: 0.5, afternoon: 0.2 },
+          cloud: { fromKm: 120, toKm: 210, lateralKm: 0, halfWidthKm: 30, base: 200, top: 900 },
+        },
+      ],
+    },
+  },
+  {
+    a: "nakanoshima",
+    b: "mukouhama",
+    cruiseAltitude: 1500,
+    note: "島から東の大陸の浜へ。海の上は 200 km。途中に前線の雨。",
+    terrain: [],
+    weather: {
+      winds: winds(40, [15, 20, 25, 30]),
+      freezingLevel: 4000,
+      features: [
+        {
+          id: "nmk-front",
+          kind: "rain",
+          prob: { morning: 0.5, afternoon: 0.5 },
+          cloud: { fromKm: 90, toKm: 160, lateralKm: 0, halfWidthKm: 30, base: 900, top: 2800 },
+          rain: { fromKm: 100, toKm: 150, lateralKm: 0, halfWidthKm: 25, intensity: 1 },
+        },
+      ],
+    },
+  },
+  {
+    a: "nakanoshima",
+    b: "sawabe",
+    cruiseAltitude: 1500,
+    note: "島から北へ、山脈のすその村へ。海の上は 170 km。陸に入ると低い丘。",
+    terrain: [{ fromKm: 215, toKm: 250, height: 900, name: "すその丘" }],
+    weather: {
+      winds: winds(0, [15, 20, 25, 30]),
+      freezingLevel: 4000,
+      features: [
+        {
+          id: "ns2-stratus",
+          kind: "cloud",
+          prob: { morning: 0.4, afternoon: 0.2 },
+          cloud: { fromKm: 140, toKm: 200, lateralKm: 0, halfWidthKm: 30, base: 200, top: 900 },
+        },
+        {
+          id: "ns2-thermal",
+          kind: "turbulence",
+          prob: { morning: 0.2, afternoon: 0.5 },
+          turbulence: { fromKm: 190, toKm: 260, lateralKm: 0, halfWidthKm: 30, intensity: 1 },
+        },
+      ],
+    },
+  },
+  {
+    a: "mukouhama",
+    b: "takamachi",
+    cruiseAltitude: 3600,
+    note: "ゆきがね峠を越える近道。浜を出てすぐ 3400 m の峰。凍る高さより上を飛ぶ。上昇型でなければ間に合わない。中間なら、軽くしておけばなんとか。",
+    terrain: [{ fromKm: 3, toKm: 63, height: 3400, name: "ゆきがね峠" }],
+    weather: {
+      winds: winds(20, [10, 20, 30, 40]),
+      freezingLevel: 3000,
+      features: [
+        {
+          id: "mt2-cap",
+          kind: "cloud",
+          prob: { morning: 0.3, afternoon: 0.8 },
+          cloud: { fromKm: 18, toKm: 50, lateralKm: 0, halfWidthKm: 20, base: 3200, top: 4600 },
+        },
+        {
+          id: "mt2-wave",
+          kind: "turbulence",
+          prob: { morning: 0.5, afternoon: 0.8 },
+          turbulence: { fromKm: 45, toKm: 110, lateralKm: 0, halfWidthKm: 35, intensity: 2 },
+        },
+        {
+          id: "mt2-cb",
+          kind: "cb",
+          prob: { morning: 0.1, afternoon: 0.5 },
+          cb: { alongKm: 40, lateralKm: -10, radiusKm: 5 },
+        },
+      ],
+    },
+  },
+  {
+    a: "mukouhama",
+    b: "sawabe",
+    cruiseAltitude: 1200,
+    note: "浜から山脈のすそを西へ。山はない。横風で、ときどき雨。",
+    terrain: [],
+    weather: {
+      winds: winds(100, [15, 20, 25, 30]),
+      freezingLevel: 3800,
+      features: [
+        {
+          id: "ms-shower",
+          kind: "rain",
+          prob: { morning: 0.3, afternoon: 0.4 },
+          cloud: { fromKm: 40, toKm: 90, lateralKm: 0, halfWidthKm: 18, base: 900, top: 2400 },
+          rain: { fromKm: 45, toKm: 85, lateralKm: 0, halfWidthKm: 14, intensity: 1 },
+        },
+      ],
+    },
+  },
+  {
+    a: "sawabe",
+    b: "takamachi",
+    cruiseAltitude: 2800,
+    note: "山脈でいちばん低い、にしの峠を越える。遠回りだが、峠は 2400 m。高原へ下る手前で揺れる。",
+    terrain: [{ fromKm: 50, toKm: 120, height: 2400, name: "にしの峠" }],
+    weather: {
+      winds: winds(60, [10, 20, 25, 35]),
+      freezingLevel: 3300,
+      features: [
+        {
+          id: "st2-cap",
+          kind: "cloud",
+          prob: { morning: 0.3, afternoon: 0.6 },
+          cloud: { fromKm: 65, toKm: 105, lateralKm: 0, halfWidthKm: 18, base: 2300, top: 3400 },
+        },
+        {
+          id: "st2-wave",
+          kind: "turbulence",
+          prob: { morning: 0.3, afternoon: 0.6 },
+          turbulence: { fromKm: 110, toKm: 160, lateralKm: 0, halfWidthKm: 30, intensity: 1 },
+        },
+      ],
+    },
+  },
+];
+
+export const HARUKA: World = {
+  id: "haruka",
+  title: "はるか海を渡り 山脈を越える",
+  name: "にしのみなと → たかまち",
+  description:
+    "長い海を渡ったあとに、高い山脈が待つ。海は巡航型で一気に、山は上昇型で。だがプロペラは旅のあいだ替えられない。どちらに合わせて、どの道を選ぶか。",
+  history:
+    "1930年、メルモーズは水上機で南大西洋を渡り、郵便を南米へ届けた。その先のアンデス越えでは、同じ郵便飛行の仲間ギヨメが冬の山に不時着し、5日歩いて生きて帰った。",
+  level: 3,
+  fields: HARUKA_FIELDS,
+  edges: HARUKA_EDGES,
+  startId: "nishinominato",
+  goalId: "takamachi",
+  fuelCapacityL: 80,
+  startMin: 7 * 60,
+  sunsetMin: 18 * 60,
+  planSpeedKmh: 110,
+  land: [
+    // 西の大陸
+    [
+      [-260, -200],
+      [260, -200],
+      [260, 25],
+      [100, 30],
+      [20, 28],
+      [-60, 35],
+      [-260, 30],
+    ],
+    island(-60, 210, 14),
+    // 東の大陸（ゆきがね山脈のある側）
+    [
+      [-260, 450],
+      [-120, 440],
+      [-40, 412],
+      [20, 402],
+      [80, 405],
+      [260, 398],
+      [260, 800],
+      [-260, 800],
+    ],
+  ],
+};
+
+// =====================================================================
 // 0. チュートリアル（本土の地図から道を切り出す）
 // =====================================================================
 /**
@@ -1163,6 +1805,6 @@ export const TUTORIAL_MOUNTAIN: World = {
 };
 
 /** コース選びに並べる順。チュートリアル → ★ → ★★ → ★★★ */
-export const COURSES: World[] = [TUTORIAL_SEA, TUTORIAL_MOUNTAIN, KAMOME, TSURANARI, SHIROGANE, OWADATSUMI];
+export const COURSES: World[] = [TUTORIAL_SEA, TUTORIAL_MOUNTAIN, KAMOME, TSURANARI, SHIROGANE, KUMOJI, OWADATSUMI, HARUKA];
 
 export const courseById = (id: string): World => COURSES.find((c) => c.id === id) ?? KAMOME;

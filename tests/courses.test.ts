@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAX_ALTITUDE, RESERVE_FUEL_L } from "../src/config";
-import { COURSES, KAMOME, OWADATSUMI, SHIROGANE, TSURANARI } from "../src/data/courses";
+import { COURSES, HARUKA, KAMOME, KUMOJI, OWADATSUMI, SHIROGANE, TSURANARI } from "../src/data/courses";
 import { clearSkies, isLand, legBetween, seaKm, shortestPath, WORLD } from "../src/data/world";
 import { canRecoverWithSpare, startCampaign } from "../src/game/campaign";
 import { evaluateFlight, overSea, terrainAt } from "../src/game/flight";
@@ -165,5 +165,66 @@ describe("しろがね山脈を越える（山越えコース）", () => {
     const winds = legBetween(W, "susono", "asahi").weather.winds;
     expect(flyLeg(makeFlight({ leg, pitch: 2, fuel: 80, departureMin: 7 * 60, weather: { winds } }), 0.6).status).toBe("arrived");
     expect(flyLeg(makeFlight({ leg, pitch: 2, fuel: 40, departureMin: 7 * 60, weather: { winds } }), 0.6).status).toBe("fuelOut");
+  });
+});
+
+describe("海と山の複合コース（くもじ峠と島・はるか海と山脈）", () => {
+  const ridgeOf = (w: World, a: string, b: string) => Math.max(0, ...legBetween(w, a, b).terrain.map((r) => r.height));
+  /** 晴れの道を、予報の風だけ入れて、教科書どおりに飛ぶ */
+  const fly = (w: World, a: string, b: string, pitch: 1 | 2 | 3 | 4 | 5, fuel: number, departureMin = 8 * 60) => {
+    const leg = legBetween(clearSkies(w), a, b);
+    const winds = legBetween(w, a, b).weather.winds;
+    return flyLeg(makeFlight({ leg, pitch, fuel, departureMin, weather: { winds } }), 0.6);
+  };
+
+  it("どちらも海と高い山の両方があり、陸路だけでは目的地へ行けない", () => {
+    for (const w of [KUMOJI, HARUKA]) {
+      expect(reachableOverLand(w), w.id).toBe(false);
+      expect(Math.max(...w.edges.map((e) => ridgeOf(w, e.a, e.b))), w.id).toBeGreaterThanOrEqual(2500);
+      expect(Math.max(...w.edges.map((e) => seaKm(legBetween(w, e.a, e.b)))), w.id).toBeGreaterThanOrEqual(120);
+      for (const e of w.edges) {
+        expect(e.cruiseAltitude, `${w.id} ${e.a}-${e.b}`).toBeGreaterThan(ridgeOf(w, e.a, e.b));
+        expect(e.cruiseAltitude).toBeLessThanOrEqual(MAX_ALTITUDE);
+      }
+    }
+  });
+
+  it("くもじ峠：谷を出てすぐの上りは、巡航型では越えられないが、中間なら満タンでも越えられる", () => {
+    expect(fly(KUMOJI, "yamaai", "urano", 5, 40, 9 * 60).status).toBe("terrain");
+    expect(fly(KUMOJI, "yamaai", "urano", 3, 80, 9 * 60).status).toBe("arrived");
+    // 峰の横をまっすぐ越える道は、山が遠いので巡航型でも越えられる
+    expect(fly(KUMOJI, "akeno", "urano", 5, 60, 9 * 60).status).toBe("arrived");
+  });
+
+  it("くもじ峠と島：山を避けて南の浜から小島づたいに行くと、海の上が長くなる", () => {
+    const south = seaKm(legBetween(KUMOJI, "minamiura", "kobato")) + seaKm(legBetween(KUMOJI, "kobato", "akane"));
+    expect(south).toBeGreaterThan(1.5 * seaKm(legBetween(KUMOJI, "urano", "akane")));
+    // 南の浜までは山がない
+    expect(ridgeOf(KUMOJI, "akeno", "minamiura")).toBe(0);
+  });
+
+  it("はるか海：まっすぐ渡ると、巡航型なら満タンで余裕があるが、上昇型では予備燃料ぎりぎり", () => {
+    const cruise = fly(HARUKA, "nishinominato", "mukouhama", 5, 80);
+    const climber = fly(HARUKA, "nishinominato", "mukouhama", 2, 80);
+    expect(seaKm(cruise.leg)).toBeGreaterThan(350);
+    expect(cruise.status).toBe("arrived");
+    expect(cruise.condition.fuelRemaining).toBeGreaterThan(RESERVE_FUEL_L + 10);
+    expect(climber.condition.fuelRemaining).toBeLessThan(RESERVE_FUEL_L + 4);
+    expect(fly(HARUKA, "nishinominato", "mukouhama", 1, 80).condition.fuelRemaining).toBeLessThan(RESERVE_FUEL_L);
+  });
+
+  it("ゆきがね峠：上昇型なら越えられ、中間は軽ければ越えられ、巡航型は越えられない。巡航型は にしの峠 へ回る", () => {
+    expect(fly(HARUKA, "mukouhama", "takamachi", 2, 80).status).toBe("arrived");
+    expect(fly(HARUKA, "mukouhama", "takamachi", 3, 40).status).toBe("arrived");
+    expect(fly(HARUKA, "mukouhama", "takamachi", 3, 80).status).toBe("terrain");
+    expect(fly(HARUKA, "mukouhama", "takamachi", 5, 40).status).toBe("terrain");
+    expect(fly(HARUKA, "sawabe", "takamachi", 5, 80).status).toBe("arrived");
+  });
+
+  it("整備士のおすすめ：長い海と高い山が続く道は中間、島づたいなら上昇型寄り", () => {
+    expect(recommendSetup(HARUKA, "mukouhama").pitch).toBe(3);
+    expect(recommendSetup(HARUKA, "mukouhama").fuelPercent).toBe(100);
+    expect(recommendSetup(HARUKA, "nakanoshima").pitch).toBeLessThanOrEqual(2);
+    expect(recommendSetup(KUMOJI, "yamaai").pitch).toBeLessThanOrEqual(2);
   });
 });

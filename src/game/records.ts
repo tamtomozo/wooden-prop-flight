@@ -120,7 +120,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     id: "all",
     title: "すべての空を越えて",
     hint: "チュートリアルのほかの、すべてのコースで",
-    text: "海峡・諸島・山脈・大洋、すべてのコースを渡りきった。",
+    text: "海峡・諸島・山脈・大洋、海と山の両方、すべてのコースを渡りきった。",
     check: ({ after }) => challengeCourses().every((w) => after.best[w.id]),
   },
 ];

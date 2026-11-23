@@ -24,6 +24,8 @@ const MARGIN_SEA = 1.35;
 const MOUNTAIN_M = 1500;
 /** これより長い海の上がある道なら、巡航型にする */
 const LONG_SEA_KM = 400;
+/** 山もあって、これより長い海の上もある道なら、中間にする（山だけなら上昇型寄り） */
+const MIXED_SEA_KM = 300;
 /** 経由地を出るのは、だいたいこの時刻（離陸距離の気温に使う） */
 const WAYPOINT_DEPART_MIN = 10 * 60;
 
@@ -86,8 +88,9 @@ export function recommendSetup(w: World, destination: string, difficulty: Diffic
   const ridge = Math.max(0, ...legs.flatMap((l) => l.terrain.map((r) => r.height)));
   const longestSea = Math.max(0, ...legs.map((l) => longestSeaKm(l)));
 
-  // ピッチの候補：山があれば上昇型寄り、長い海なら巡航型。離陸できなければ1つずつ上昇型へ
-  const first: PitchLevel = ridge >= MOUNTAIN_M ? 2 : longestSea >= LONG_SEA_KM ? 5 : 4;
+  // ピッチの候補：山があれば上昇型寄り、長い海なら巡航型、両方なら中間。離陸できなければ1つずつ上昇型へ
+  const mixed = ridge >= MOUNTAIN_M && longestSea >= MIXED_SEA_KM;
+  const first: PitchLevel = mixed ? 3 : ridge >= MOUNTAIN_M ? 2 : longestSea >= LONG_SEA_KM ? 5 : 4;
   const candidates = ([first, 5, 4, 3, 2, 1] as PitchLevel[]).filter((p, i, a) => p <= first && a.indexOf(p) === i);
 
   for (const dropSpare of [false, true]) {
@@ -103,6 +106,8 @@ export function recommendSetup(w: World, destination: string, difficulty: Diffic
       const reasons = [
         tooShort
           ? `ピッチ ${pitch}（${PITCH_NAME[pitch]}）：${tooShort.name}の滑走路は ${tooShort.runwayLength} m しかない。次の区間の燃料を積んでも飛び立てるよう、上昇型に寄せた`
+          : mixed
+          ? `ピッチ ${pitch}（${PITCH_NAME[pitch]}）：${longestSea} km の海と ${ridge} m の山の両方がある。プロペラは途中で替えられないから、まん中で両立させる。山の手前では燃料を軽くしておけ`
           : ridge >= MOUNTAIN_M
           ? `ピッチ ${pitch}（${PITCH_NAME[pitch]}）：${ridge} m の山を越える。上昇の力を優先した`
           : longestSea >= LONG_SEA_KM
