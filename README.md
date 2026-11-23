@@ -16,6 +16,8 @@
 
 **ランディングページ**：`lp/`（`index.html`・`style.css`・`img/` のスクリーンショット）。`npm run build` で `dist/lp/` にそのままコピーされ（`vite.config.ts` の `copyLandingPage`）、GitHub Pages では `…/wooden-prop-flight/lp/` で見られる。
 
+**英語版**：ゲームは日本語と英語の両方を持っている。言語は URL の `?lang=en` / `?lang=ja` → 前に選んだ言語（localStorage `plane.lang`）→ ブラウザの言語（日本語以外なら英語）の順で決まり、タイトル画面右上の「English / 日本語」で切り替えられる（ページを読み直す）。文言は各ファイルで `tr("日本語", "English")`（`src/i18n.ts`）と両方書き、`index.html` の固定の文言は `data-en` / `data-en-title` / `data-en-label` 属性に英語を書く。テスト（Node）はいつも日本語。英語のランディングページは `lp/en.html`（スクリーンショットは `lp/img/en/`）。英語版の地名はローマ字（みさき飛行場 → Misaki Field、かもめ海峡 → Kamome Strait）。
+
 **開発するとき**：
 
 ```
@@ -138,6 +140,7 @@ npm run build    # dist/index.html を作り直す
 
 | ファイル | 中身 |
 |---|---|
+| `src/i18n.ts` | 日本語版と英語版の切り替え（`tr("日本語", "English")`、言語の決め方、`index.html` の文言の置きかえ） |
 | `src/config.ts` | 4章の定数と、ゲームの仮の値（重さ・整備の時間など） |
 | `src/model/physics.ts` | 4章の計算（ピッチ・回転数・混合比・速度と燃料・上昇・離陸距離・ボルト・前縁・振動） |
 | `src/model/weather.ts` | D. 天気の計算（高度別の風・雲・雨・積乱雲・乱気流・霧・着氷・キャブレター凍結）と、予報の生成 |

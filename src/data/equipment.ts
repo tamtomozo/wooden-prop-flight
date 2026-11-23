@@ -1,5 +1,6 @@
 import { EQUIPMENT_MAX_KG, EQUIPMENT_SLOTS } from "../config";
 import type { EdgeGear, Equipment } from "../model/types";
+import { tr } from "../i18n";
 
 export interface GearInfo {
   name: string;
@@ -8,14 +9,14 @@ export interface GearInfo {
 }
 
 export const EDGE_GEAR: Record<Exclude<EdgeGear, "none">, GearInfo> = {
-  tape: { name: "前縁保護テープ", kg: 3, effect: "前縁の傷みを半分に" },
-  metal: { name: "金属の前縁カバー", kg: 8, effect: "前縁の傷みを大きく減らす（約1/3）" },
+  tape: { name: tr("前縁保護テープ", "Leading-edge tape"), kg: 3, effect: tr("前縁の傷みを半分に", "Halves leading-edge wear") },
+  metal: { name: tr("金属の前縁カバー", "Metal edge cover"), kg: 8, effect: tr("前縁の傷みを大きく減らす（約1/3）", "Cuts leading-edge wear a lot (to about 1/3)") },
 };
 
 export const ITEMS: Record<"toolKit" | "spareProp" | "weatherRadio", GearInfo> = {
-  toolKit: { name: "工具セット", kg: 10, effect: "整備場のない経由地でもボルトを締め直せる" },
-  spareProp: { name: "予備のプロペラ", kg: 15, effect: "プロペラの致命的な損傷から一度だけ復帰できる" },
-  weatherRadio: { name: "携帯気象ラジオ", kg: 3, effect: "飛行中に天気予報を更新できる（30分に1回）" },
+  toolKit: { name: tr("工具セット", "Tool kit"), kg: 10, effect: tr("整備場のない経由地でもボルトを締め直せる", "Re-tighten the bolts even at stops without a repair shop") },
+  spareProp: { name: tr("予備のプロペラ", "Spare propeller"), kg: 15, effect: tr("プロペラの致命的な損傷から一度だけ復帰できる", "Recover once from fatal propeller damage") },
+  weatherRadio: { name: tr("携帯気象ラジオ", "Weather radio"), kg: 3, effect: tr("飛行中に天気予報を更新できる（30分に1回）", "Update the forecast in flight (once every 30 min)") },
 };
 
 export function equipmentList(e: Equipment): GearInfo[] {

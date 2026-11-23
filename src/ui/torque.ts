@@ -4,12 +4,16 @@
 import { TORQUE_OK_FROM, TORQUE_OK_TO } from "../config";
 import type { TorqueResult } from "../model/types";
 import { mechanicLine, openDialog } from "./dialog";
+import { tr } from "../i18n";
 
 const BOLTS = 3;
 const OK_FROM = TORQUE_OK_FROM;
 const OK_TO = TORQUE_OK_TO;
 
-const RESULT_TEXT: Record<TorqueResult, string> = { under: "不足", ok: "適正", over: "締めすぎ" };
+const RESULT_TEXT: Record<TorqueResult, string> = tr(
+  { under: "不足", ok: "適正", over: "締めすぎ" },
+  { under: "Too loose", ok: "Just right", over: "Too tight" },
+);
 
 export function overallTorque(results: TorqueResult[]): TorqueResult {
   if (results.includes("over")) return "over";
@@ -32,13 +36,13 @@ export function runTorque(opts: { heading: string; note: string; onDone: (r: Tor
       <div class="tq-meter">
         <div class="tq-band" style="left:${OK_FROM}%;width:${OK_TO - OK_FROM}%"></div>
         <div class="tq-fill"></div>
-        <div class="tq-click">カチッ</div>
+        <div class="tq-click">${tr("カチッ", "Click!")}</div>
       </div>
-      <div class="tq-scale"><span>ゆるい</span><span>適正</span><span>締めすぎ</span></div>
+      <div class="tq-scale"><span>${tr("ゆるい", "Loose")}</span><span>${tr("適正", "Right")}</span><span>${tr("締めすぎ", "Too tight")}</span></div>
       <div class="tq-bolts">${Array.from({ length: BOLTS }, (_, i) => `<span class="tq-bolt" data-i="${i}">${i + 1}</span>`).join("")}</div>
     </div>
-    ${mechanicLine(`<span class="tq-msg">押し続けるとトルクが上がる。レンチが「カチッ」と鳴ったら離せ。確かめるときは締める方向で。</span>`)}
-    <button class="primary tq-hold">押して締める（スペースキーでも）</button>`,
+    ${mechanicLine(`<span class="tq-msg">${tr("押し続けるとトルクが上がる。レンチが「カチッ」と鳴ったら離せ。確かめるときは締める方向で。", "Hold to raise the torque. Let go when the wrench goes \"click\". Always check in the tightening direction.")}</span>`)}
+    <button class="primary tq-hold">${tr("押して締める（スペースキーでも）", "Hold to tighten (or Space)")}</button>`,
   );
   const fill = root.querySelector<HTMLElement>(".tq-fill")!;
   const click = root.querySelector<HTMLElement>(".tq-click")!;
@@ -83,7 +87,11 @@ export function runTorque(opts: { heading: string; note: string; onDone: (r: Tor
     bolt.classList.add(r);
     bolt.title = RESULT_TEXT[r];
     msg.textContent =
-      r === "ok" ? "よし、ちょうどいい。" : r === "under" ? "ゆるいぞ。もう少し待ってから離せ。" : "締めすぎだ！木のハブがつぶれる。";
+      r === "ok"
+        ? tr("よし、ちょうどいい。", "Good, just right.")
+        : r === "under"
+          ? tr("ゆるいぞ。もう少し待ってから離せ。", "Too loose. Wait a little longer before letting go.")
+          : tr("締めすぎだ！木のハブがつぶれる。", "Too tight! You'll crush the wooden hub.");
     if (results.length >= BOLTS) finish();
   };
 
@@ -108,12 +116,12 @@ export function runTorque(opts: { heading: string; note: string; onDone: (r: Tor
     window.removeEventListener("keyup", onKey);
     const overall = overallTorque(results);
     const comment = {
-      ok: "3本とも適正だ。これで長持ちする。",
-      under: "ゆるいボルトがある。このままだと早くゆるむぞ（締め直しはできる）。",
-      over: "締めすぎた。木がつぶれて、区間ごとにプロペラが弱っていく。締めすぎは取り消せない。",
+      ok: tr("3本とも適正だ。これで長持ちする。", "All three are just right. That will last."),
+      under: tr("ゆるいボルトがある。このままだと早くゆるむぞ（締め直しはできる）。", "One is loose. It will work loose quickly like this (you can re-tighten it)."),
+      over: tr("締めすぎた。木がつぶれて、区間ごとにプロペラが弱っていく。締めすぎは取り消せない。", "Too tight. The wood is crushed, and the propeller weakens every leg. Over-tightening can't be undone."),
     }[overall];
     msg.textContent = comment;
-    hold.textContent = `結果：${RESULT_TEXT[overall]}　（次へ）`;
+    hold.textContent = tr(`結果：${RESULT_TEXT[overall]}　（次へ）`, `Result: ${RESULT_TEXT[overall]}  (next)`);
     hold.classList.add("done");
     // 最後に離したときの click を拾わないよう、少し待ってから「次へ」を受け付ける
     setTimeout(() => hold.addEventListener("click", () => opts.onDone(overall), { once: true }), 300);

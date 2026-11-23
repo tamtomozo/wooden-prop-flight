@@ -18,17 +18,21 @@ import { distanceToArea, itemArea } from "../model/weather";
 import type { MixtureZone } from "../model/physics";
 import type { Leg } from "../model/types";
 import { BLUE, GREEN, RED, RoundGauge, YELLOW } from "./gauge";
+import { tr } from "../i18n";
 
 type Level = "green" | "yellow" | "red";
 
 export const ZONE_LABEL: Record<MixtureZone, { text: string; color: string }> = {
-  rich: { text: "濃い", color: BLUE },
-  power: { text: "最大出力", color: GREEN },
-  economy: { text: "最良燃費", color: YELLOW },
-  tooLean: { text: "薄すぎ", color: RED },
+  rich: { text: tr("濃い", "Rich"), color: BLUE },
+  power: { text: tr("最大出力", "Best power"), color: GREEN },
+  economy: { text: tr("最良燃費", "Best economy"), color: YELLOW },
+  tooLean: { text: tr("薄すぎ", "Too lean"), color: RED },
 };
 
-export const PHASE_LABEL = { climb: "上昇中", cruise: "巡航中", descent: "降下中" } as const;
+export const PHASE_LABEL = tr(
+  { climb: "上昇中", cruise: "巡航中", descent: "降下中" },
+  { climb: "Climbing", cruise: "Cruising", descent: "Descending" },
+);
 
 /** 燃料計の色の境目（タンクに対する割合） */
 const FUEL_LOW = 0.15;
@@ -59,7 +63,7 @@ export class CockpitPanel {
     const canvas = (id: string) => document.querySelector<HTMLCanvasElement>(id)!;
 
     this.asi = new RoundGauge(canvas("#g-asi"), {
-      title: "対気速度",
+      title: tr("対気速度", "Airspeed"),
       unit: "km/h",
       min: 40,
       max: 240,
@@ -74,7 +78,7 @@ export class CockpitPanel {
       ],
     });
     this.alt = new RoundGauge(canvas("#g-alt"), {
-      title: "高度計",
+      title: tr("高度計", "Altimeter"),
       unit: "×100 m",
       min: 0,
       max: 3000,
@@ -83,7 +87,7 @@ export class CockpitPanel {
       label: (v) => String(v / 100),
     });
     this.tach = new RoundGauge(canvas("#g-tach"), {
-      title: "回転計",
+      title: tr("回転計", "Tachometer"),
       unit: "×100 rpm",
       min: 500,
       max: 3000,
@@ -97,7 +101,7 @@ export class CockpitPanel {
       ],
     });
     this.egt = new RoundGauge(canvas("#g-egt"), {
-      title: "排気温度",
+      title: tr("排気温度", "EGT"),
       unit: "℃",
       min: 400,
       max: 800,
@@ -106,8 +110,8 @@ export class CockpitPanel {
     });
     this.fuel = this.makeFuelGauge(cap);
     this.engine = new RoundGauge(canvas("#g-engine"), {
-      title: "エンジン",
-      unit: "調子",
+      title: tr("エンジン", "Engine"),
+      unit: tr("調子", "health"),
       min: 0,
       max: 100,
       sweep: halfSweep,
@@ -125,7 +129,7 @@ export class CockpitPanel {
   private makeFuelGauge(cap: number): RoundGauge {
     const halfSweep: [number, number] = [Math.PI * 1.2, Math.PI * 1.8];
     return new RoundGauge(document.querySelector<HTMLCanvasElement>("#g-fuel")!, {
-      title: "燃料",
+      title: tr("燃料", "Fuel"),
       min: 0,
       max: cap,
       sweep: halfSweep,
@@ -164,7 +168,7 @@ export class CockpitPanel {
   }
 
   setLeg(leg: Leg) {
-    $("#kb-title").textContent = `飛行メモ　${leg.from.name} → ${leg.to.name}`;
+    $("#kb-title").textContent = `${tr("飛行メモ　", "Flight notes  ")}${leg.from.name} → ${leg.to.name}`;
   }
 
   update(s: FlightState, details: boolean, running: boolean) {
@@ -224,7 +228,7 @@ export class CockpitPanel {
     // ---- 飛行メモ ----
     const gs = Math.max(0, p.groundSpeed);
     const hw = Math.round(s.env.headwind);
-    this.memo("kb-ground", null, `${gs.toFixed(0)} km/h`, hw >= 0 ? `向かい風 ${hw} km/h` : `追い風 ${-hw} km/h`);
+    this.memo("kb-ground", null, `${gs.toFixed(0)} km/h`, hw >= 0 ? tr(`向かい風 ${hw} km/h`, `headwind ${hw} km/h`) : tr(`追い風 ${-hw} km/h`, `tailwind ${-hw} km/h`));
 
     // 届く距離：予備燃料ぶんを残して着けるなら緑、ぎりぎりなら黄、届かないなら赤
     const reserveKm = p.fuelBurn > 0 ? (RESERVE_FUEL_L / p.fuelBurn) * p.groundSpeed : 0;
@@ -233,14 +237,14 @@ export class CockpitPanel {
     this.memo(
       "kb-range",
       rangeLevel,
-      { green: "余裕あり", yellow: "ぎりぎり", red: "届かない" }[rangeLevel],
-      d ? `${rangeShown}・残り ${left.toFixed(0)} km` : `残り ${left.toFixed(0)} km`,
+      tr({ green: "余裕あり", yellow: "ぎりぎり", red: "届かない" }, { green: "Plenty", yellow: "Just enough", red: "Can't make it" })[rangeLevel],
+      d ? `${rangeShown}${tr("・残り", " · to go")} ${left.toFixed(0)} km` : `${tr("残り", "to go")} ${left.toFixed(0)} km`,
     );
 
     // 到着予定：日没30分前までなら緑
     const eta = p.groundSpeed > 0 ? clockMin(s) + (left / p.groundSpeed) * 60 : Infinity;
     const etaLevel: Level = eta <= s.sunsetMin - 30 ? "green" : eta <= s.sunsetMin ? "yellow" : "red";
-    this.memo("kb-eta", etaLevel, eta < 24 * 60 ? fmtClock(eta) : "--:--", `日没 ${fmtClock(s.sunsetMin)}`);
+    this.memo("kb-eta", etaLevel, eta < 24 * 60 ? fmtClock(eta) : "--:--", `${tr("日没", "sunset")} ${fmtClock(s.sunsetMin)}`);
 
     const ahead = aheadWeather(s);
     this.memo("kb-ahead", ahead.level, ahead.text, ahead.note);
@@ -249,36 +253,36 @@ export class CockpitPanel {
     // 表示は「操縦者がしたつもりの操作」。疲れていると、効くまでに時間がかかる
     const want = intendedControls(s);
     const lat = intendedLateral(s);
-    $("#alt-target").textContent = s.approach ? "着陸へ" : `${want.targetAltitude} m`;
+    $("#alt-target").textContent = s.approach ? tr("着陸へ", "Landing") : `${want.targetAltitude} m`;
     $("#course").textContent = s.courseLocked
-      ? "コースへ"
+      ? tr("コースへ", "To course")
       : lat === 0
         ? Math.abs(s.lateral) > 1
-          ? "戻り中"
-          : "まっすぐ"
-        : `${lat < 0 ? "左" : "右"} ${Math.abs(lat)} km`;
+          ? tr("戻り中", "Returning")
+          : tr("まっすぐ", "Straight")
+        : tr(`${lat < 0 ? "左" : "右"} ${Math.abs(lat)} km`, `${Math.abs(lat)} km ${lat < 0 ? "L" : "R"}`);
     $("#carbheat").classList.toggle("on", want.carbHeat);
-    $("#carb-note").textContent = this.rule.autoCarbHeat ? "自動" : "H";
+    $("#carb-note").textContent = this.rule.autoCarbHeat ? tr("自動", "Auto") : "H";
     ($("#carbheat") as HTMLButtonElement).disabled = this.rule.autoCarbHeat || !flying;
     ($("#mixture") as HTMLInputElement).disabled = this.rule.autoMixture;
     const radio = $("#radio") as HTMLButtonElement;
     radio.disabled = !radioReady(s) || !flying;
     $("#radio-note").textContent = !s.radio
-      ? "積んでいない"
+      ? tr("積んでいない", "Not carried")
       : radioReady(s)
-        ? "予報を更新（P）"
-        : `あと ${Math.ceil(s.radioReadyAt - s.elapsedMin)} 分`;
+        ? tr("予報を更新（P）", "Update forecast (P)")
+        : tr(`あと ${Math.ceil(s.radioReadyAt - s.elapsedMin)} 分`, `in ${Math.ceil(s.radioReadyAt - s.elapsedMin)} min`);
     ($("#turnback") as HTMLButtonElement).disabled = s.returning || !flying;
     for (const b of document.querySelectorAll<HTMLButtonElement>(".navbox button"))
       b.disabled = !flying || s.approach || (b.dataset.nav!.startsWith("alt") ? false : s.courseLocked || s.holding);
 
     // ---- レバーと整備士 ----
     $("#throttle-out").textContent = `${Math.round(want.throttle * 100)}%`;
-    $("#mixture-out").textContent = this.rule.autoMixture ? "自動" : d ? `${want.mixture}` : "";
+    $("#mixture-out").textContent = this.rule.autoMixture ? tr("自動", "Auto") : d ? `${want.mixture}` : "";
 
     // ---- 操縦者 ----
-    this.pilotMeter("pilot-fatigue", s.pilot.fatigue, ["元気", "疲れてきた", "くたくた"], d);
-    this.pilotMeter("pilot-haste", s.pilot.haste, ["落ち着いている", "焦っている", "かなり焦っている"], d);
+    this.pilotMeter("pilot-fatigue", s.pilot.fatigue, tr(["元気", "疲れてきた", "くたくた"], ["Fresh", "Getting tired", "Exhausted"]), d);
+    this.pilotMeter("pilot-haste", s.pilot.haste, tr(["落ち着いている", "焦っている", "かなり焦っている"], ["Calm", "In a hurry", "Rushing badly"]), d);
     // クリックした計器のひとことを優先して出す。着陸の降下に入ったら、整備士のひとことは出さない
     // （着く先の景色を見せる。計器をクリックしたときだけは出す）
     const pin = this.pinned && performance.now() < this.pinned.until ? this.pinned : null;
@@ -310,14 +314,17 @@ export class CockpitPanel {
   }
 }
 
-const KIND_TEXT = { cloud: "雲", rain: "雨", turbulence: "乱気流", cb: "積乱雲" } as const;
+const KIND_TEXT = tr(
+  { cloud: "雲", rain: "雨", turbulence: "乱気流", cb: "積乱雲" },
+  { cloud: "Cloud", rain: "Rain", turbulence: "Turbulence", cb: "Thunderstorm" },
+);
 
 /** 進む先 120 km で、いちばん近い天気（予報か、確かめた実際の天気） */
 function aheadWeather(s: FlightState): { level: Level | null; text: string; note: string } {
   const e = s.env;
-  if (e.inCloud) return { level: "red", text: "雲の中！", note: "すぐ雲から出ろ" };
-  if (e.cbDistance < CB_DANGER_KM) return { level: "red", text: "積乱雲が近い", note: `${Math.round(e.cbDistance)} km` };
-  if (s.holding) return { level: "yellow", text: "霧で待機中", note: "晴れるのを待つ" };
+  if (e.inCloud) return { level: "red", text: tr("雲の中！", "In cloud!"), note: tr("すぐ雲から出ろ", "Get out now") };
+  if (e.cbDistance < CB_DANGER_KM) return { level: "red", text: tr("積乱雲が近い", "Storm close"), note: `${Math.round(e.cbDistance)} km` };
+  if (s.holding) return { level: "yellow", text: tr("霧で待機中", "Holding for fog"), note: tr("晴れるのを待つ", "Wait for it to clear") };
   const dir = s.returning ? -1 : 1;
   let best: { d: number; text: string; note: string; level: Level } | null = null;
   for (const item of s.forecast.items) {
@@ -331,12 +338,12 @@ function aheadWeather(s: FlightState): { level: Level | null; text: string; note
     if (d > 120) continue;
     const here = d < 0.5;
     const level: Level = item.kind === "cb" || item.kind === "cloud" ? "red" : "yellow";
-    const text = `${KIND_TEXT[item.kind]}${here ? "の中" : ` ${Math.round(d)} km 先`}`;
-    const note = state === true ? "見えている" : `予報 ${Math.round(item.prob * 100)}%`;
+    const text = `${KIND_TEXT[item.kind]}${here ? tr("の中", " here") : tr(` ${Math.round(d)} km 先`, ` in ${Math.round(d)} km`)}`;
+    const note = state === true ? tr("見えている", "in sight") : `${tr("予報", "forecast")} ${Math.round(item.prob * 100)}%`;
     if (!best || d < best.d) best = { d, text, note, level };
   }
-  if (e.rain > 0) return { level: "yellow", text: `雨（強さ ${e.rain}）`, note: "スロットルを絞れ" };
-  if (e.turbulence > 0) return { level: "yellow", text: `乱気流（${e.turbulence}）`, note: `${VA_KMH} km/h 以下に` };
+  if (e.rain > 0) return { level: "yellow", text: tr(`雨（強さ ${e.rain}）`, `Rain (${e.rain})`), note: tr("スロットルを絞れ", "Throttle back") };
+  if (e.turbulence > 0) return { level: "yellow", text: tr(`乱気流（${e.turbulence}）`, `Turbulence (${e.turbulence})`), note: tr(`${VA_KMH} km/h 以下に`, `below ${VA_KMH} km/h`) };
   if (best) return best;
-  return { level: "green", text: "晴れ", note: "120 km 先まで予報なし" };
+  return { level: "green", text: tr("晴れ", "Clear"), note: tr("120 km 先まで予報なし", "nothing forecast for 120 km") };
 }

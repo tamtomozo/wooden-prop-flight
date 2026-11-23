@@ -4,6 +4,7 @@ import { paramLine, type ParamId } from "../game/mechanicLines";
 import type { Rumor } from "../game/rumors";
 import { pilotLevel } from "../model/pilot";
 import type { AircraftCondition, Pilot } from "../model/types";
+import { tr } from "../i18n";
 
 const overlay = document.querySelector<HTMLElement>("#overlay")!;
 const dialog = document.querySelector<HTMLElement>("#dialog")!;
@@ -31,17 +32,19 @@ export const isDialogOpen = () => !overlay.hidden;
 
 export const fmtDuration = (min: number) => {
   const m = Math.round(min);
-  return m >= 60 ? `${Math.floor(m / 60)}時間${String(m % 60).padStart(2, "0")}分` : `${m}分`;
+  return m >= 60
+    ? tr(`${Math.floor(m / 60)}時間${String(m % 60).padStart(2, "0")}分`, `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")} min`)
+    : tr(`${m}分`, `${m} min`);
 };
 
 export const mechanicLine = (text: string) =>
-  `<p class="mechanic"><span class="who">整備士</span><span>${text}</span></p>`;
+  `<p class="mechanic"><span class="who">${tr("整備士", "Mechanic")}</span><span>${text}</span></p>`;
 
 /** 土地の人のうわさ（整備士のひとことと並べて、色を変えて出す）。about は「◯◯への道」など、何のうわさか */
 export const rumorsHtml = (rs: Rumor[], about: string) =>
   rs.length
     ? `<div class="rumors">${rs
-        .map((r) => `<p class="mechanic rumor"><span class="who">${r.who}</span><span><small>${about}のうわさ</small>${r.text}</span></p>`)
+        .map((r) => `<p class="mechanic rumor"><span class="who">${r.who}</span><span><small>${tr(`${about}のうわさ`, `Rumor about ${about}`)}</small>${r.text}</span></p>`)
         .join("")}</div>`
     : "";
 
@@ -101,12 +104,12 @@ export function conditionRows(c: AircraftCondition): ConditionRow[] {
   const dur = lv(c.propDurability >= 60, c.propDurability >= 30);
   const frame = lv(c.airframe >= 70, c.airframe >= 40);
   return [
-    { id: "B1", name: "ボルトの締まり", value: c.boltTightness, level: bolt, word: words(bolt, ["しっかり", "ゆるみ気味", "危ない"]), bar: c.boltTightness / 100 },
-    { id: "B2", name: "プロペラの前縁", value: c.propEdge, level: edge, word: words(edge, ["きれい", "傷あり", "傷だらけ"]), bar: c.propEdge / 100 },
-    { id: "B3", name: "振動", value: c.vibration, level: vib, word: words(vib, ["静か", "少し揺れる", "激しい"]), bar: c.vibration / 100 },
-    { id: "B4", name: "エンジンの調子", value: c.engineHealth, level: eng, word: words(eng, ["良好", "荒れ気味", "危険"]), bar: c.engineHealth / 100 },
-    { id: "B5", name: "プロペラ耐久度", value: c.propDurability, level: dur, word: words(dur, ["丈夫", "弱ってきた", "割れそう"]), bar: c.propDurability / 100 },
-    { id: "B6", name: "機体の強度", value: c.airframe, level: frame, word: words(frame, ["丈夫", "傷みあり", "危ない"]), bar: c.airframe / 100 },
+    { id: "B1", name: tr("ボルトの締まり", "Bolt tightness"), value: c.boltTightness, level: bolt, word: words(bolt, tr(["しっかり", "ゆるみ気味", "危ない"], ["Tight", "Loosening", "Dangerous"])), bar: c.boltTightness / 100 },
+    { id: "B2", name: tr("プロペラの前縁", "Prop leading edge"), value: c.propEdge, level: edge, word: words(edge, tr(["きれい", "傷あり", "傷だらけ"], ["Clean", "Nicked", "Badly nicked"])), bar: c.propEdge / 100 },
+    { id: "B3", name: tr("振動", "Vibration"), value: c.vibration, level: vib, word: words(vib, tr(["静か", "少し揺れる", "激しい"], ["Smooth", "A little shaky", "Violent"])), bar: c.vibration / 100 },
+    { id: "B4", name: tr("エンジンの調子", "Engine health"), value: c.engineHealth, level: eng, word: words(eng, tr(["良好", "荒れ気味", "危険"], ["Good", "A bit rough", "Dangerous"])), bar: c.engineHealth / 100 },
+    { id: "B5", name: tr("プロペラ耐久度", "Prop durability"), value: c.propDurability, level: dur, word: words(dur, tr(["丈夫", "弱ってきた", "割れそう"], ["Strong", "Weakening", "About to crack"])), bar: c.propDurability / 100 },
+    { id: "B6", name: tr("機体の強度", "Airframe strength"), value: c.airframe, level: frame, word: words(frame, tr(["丈夫", "傷みあり", "危ない"], ["Strong", "Worn", "Dangerous"])), bar: c.airframe / 100 },
   ];
 }
 
@@ -124,7 +127,7 @@ function rowHtml(id: string, name: string, level: Level, word: string, bar: numb
     <span class="st-name"><small>${id}</small> ${name}</span>
     <span class="st-bar"><i style="width:${Math.max(0, Math.min(1, bar)) * 100}%"></i></span>
     <span class="st-word">${plain ? "" : word}${showNum ? ` <small>${value.toFixed(0)}</small>` : ""}</span>
-    ${line ? `<span class="st-line">整備士：${line}</span>` : ""}
+    ${line ? `<span class="st-line">${tr("整備士：", "Mechanic: ")}${line}</span>` : ""}
   </div>`;
 }
 
@@ -134,5 +137,10 @@ export function pilotTable(p: Pilot, details: boolean, o: TableOptions = {}): st
     const level = pilotLevel(v);
     return rowHtml(id, name, level, words[level === "green" ? 0 : level === "yellow" ? 1 : 2], v / 100, v, details, o);
   };
-  return `<div class="status">${row("E1", "疲労", p.fatigue, ["元気", "疲れてきた", "くたくた"])}${row("E2", "焦り", p.haste, ["落ち着いている", "焦っている", "かなり焦っている"])}</div>`;
+  return `<div class="status">${row("E1", tr("疲労", "Fatigue"), p.fatigue, tr(["元気", "疲れてきた", "くたくた"], ["Fresh", "Getting tired", "Exhausted"]))}${row(
+    "E2",
+    tr("焦り", "Haste"),
+    p.haste,
+    tr(["落ち着いている", "焦っている", "かなり焦っている"], ["Calm", "In a hurry", "Rushing badly"]),
+  )}</div>`;
 }

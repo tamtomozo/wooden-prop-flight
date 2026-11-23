@@ -5,7 +5,8 @@ import { COURSES, OWADATSUMI } from "../data/courses";
 import { seaKm } from "../data/world";
 import type { World } from "../model/types";
 import type { CampaignState } from "./campaign";
-import { RANK_FROM, type TripEvaluation } from "./evaluation";
+import { RANK_FROM, SCORE_LABEL, type TripEvaluation } from "./evaluation";
+import { tr } from "../i18n";
 
 export type Rank = TripEvaluation["rank"];
 
@@ -54,73 +55,76 @@ export interface Achievement {
 export const ACHIEVEMENTS: Achievement[] = [
   {
     id: "first",
-    title: "はじめての横断",
-    hint: "どこかのコースで、目的地まで飛びきる",
-    text: "はじめて目的地まで飛びきった。",
+    title: tr("はじめての横断", "First crossing"),
+    hint: tr("どこかのコースで、目的地まで飛びきる", "Fly all the way to the goal on any course"),
+    text: tr("はじめて目的地まで飛びきった。", "You flew all the way to the goal for the first time."),
     check: () => true,
   },
   {
     id: "oneDay",
-    title: "一日で渡りきる",
-    hint: "チュートリアルではないコースを、泊まらずに",
-    text: "1日目のうちに、海や山の向こうへ着いた。",
+    title: tr("一日で渡りきる", "Across in a day"),
+    hint: tr("チュートリアルではないコースを、泊まらずに", "A non-tutorial course, without staying overnight"),
+    text: tr("1日目のうちに、海や山の向こうへ着いた。", "You got beyond the sea or mountains on day 1."),
     check: ({ c }) => !c.world.tutorial && c.day === 1,
   },
   {
     id: "comeback",
-    title: "引き返して、また飛んだ",
-    hint: "勇気ある撤退の、その先",
-    text: "一度は引き返し、それでも目的地に着いた。",
+    title: tr("引き返して、また飛んだ", "Turned back, flew again"),
+    hint: tr("勇気ある撤退の、その先", "What comes after a brave retreat"),
+    text: tr("一度は引き返し、それでも目的地に着いた。", "You turned back once, and still reached the goal."),
     check: ({ c }) => c.turnBacks > 0,
   },
   {
     id: "sea500",
-    title: "海の上の 500 km",
-    hint: "1回の旅で、長い長い海の上を",
-    text: "1回の旅で、海の上を 500 km 以上飛んだ。",
+    title: tr("海の上の 500 km", "500 km over water"),
+    hint: tr("1回の旅で、長い長い海の上を", "A long, long way over the sea in one trip"),
+    text: tr("1回の旅で、海の上を 500 km 以上飛んだ。", "You flew more than 500 km over the sea in one trip."),
     check: ({ flownSeaKm }) => flownSeaKm >= 500,
   },
   {
     id: "summit",
-    title: "峰の横を越えて",
-    hint: "3000 m を越える山のある区間を",
-    text: "3000 m を越える山なみを飛び越えた。",
+    title: tr("峰の横を越えて", "Past the peak"),
+    hint: tr("3000 m を越える山のある区間を", "A leg with mountains over 3000 m"),
+    text: tr("3000 m を越える山なみを飛び越えた。", "You flew over a range higher than 3000 m."),
     check: ({ c }) => c.records.some((r) => !r.returned && r.leg.terrain.some((x) => x.height >= 3000)),
   },
   {
     id: "thrifty",
-    title: "燃費名人",
-    hint: "1 L の燃料で、できるだけ遠くへ",
-    text: "旅全体で、1 L あたり 7 km 以上飛んだ。",
+    title: tr("燃費名人", "Economy master"),
+    hint: tr("1 L の燃料で、できるだけ遠くへ", "As far as possible on each liter"),
+    text: tr("旅全体で、1 L あたり 7 km 以上飛んだ。", "Over the whole trip, you flew more than 7 km per liter."),
     check: ({ kmPerL }) => kmPerL >= 7,
   },
   {
     id: "ocean",
-    title: "大洋を越えた",
-    hint: "★★★ のコースを渡りきる",
-    text: "おおわだつみを渡りきった。",
-    reward: `格納庫で増設タンク（+${BIG_TANK_L} L）が使えるようになった。史実の大洋横断機も、胴体いっぱいに燃料を積んだ`,
+    title: tr("大洋を越えた", "Ocean crossed"),
+    hint: tr("★★★ のコースを渡りきる", "Complete a ★★★ course"),
+    text: tr("おおわだつみを渡りきった。", "You crossed the Owatatsumi."),
+    reward: tr(
+      `格納庫で増設タンク（+${BIG_TANK_L} L）が使えるようになった。史実の大洋横断機も、胴体いっぱいに燃料を積んだ`,
+      `The extra tank (+${BIG_TANK_L} L) is now available in the hangar. The real ocean-crossing planes also filled their fuselages with fuel`,
+    ),
     check: ({ c }) => c.world.id === OWADATSUMI.id,
   },
   {
     id: "rankS",
-    title: "名パイロット",
-    hint: "最高の評価をとる",
-    text: "S ランクをとった。",
+    title: tr("名パイロット", "Ace pilot"),
+    hint: tr("最高の評価をとる", "Get the top score"),
+    text: tr("S ランクをとった。", "You got an S rank."),
     check: ({ ev }) => ev.rank === "S",
   },
   {
     id: "real",
-    title: "計器だけを信じて",
-    hint: "いちばん難しい難易度で",
-    text: "難易度リアルで目的地に着いた。",
+    title: tr("計器だけを信じて", "Trust only the gauges"),
+    hint: tr("いちばん難しい難易度で", "On the hardest difficulty"),
+    text: tr("難易度リアルで目的地に着いた。", "You reached the goal on Real difficulty."),
     check: ({ c }) => c.difficulty === "real",
   },
   {
     id: "all",
-    title: "すべての空を越えて",
-    hint: "チュートリアルのほかの、すべてのコースで",
-    text: "海峡・諸島・山脈・大洋、海と山の両方、すべてのコースを渡りきった。",
+    title: tr("すべての空を越えて", "Over every sky"),
+    hint: tr("チュートリアルのほかの、すべてのコースで", "On every course except the tutorials"),
+    text: tr("海峡・諸島・山脈・大洋、海と山の両方、すべてのコースを渡りきった。", "Strait, islands, range, ocean, sea-and-mountains: you crossed every course."),
     check: ({ after }) => challengeCourses().every((w) => after.best[w.id]),
   },
 ];
@@ -196,11 +200,11 @@ const NEXT_RANK: { rank: Rank; from: number }[] = [
 
 /** 評価の項目ごとの、点を伸ばすためのひとこと */
 const GROW_HINT: Record<string, string> = {
-  日数: "泊まらずに着ければ",
-  燃費: "排気温度計で最良燃費を探し、向かい風の弱い高度を選べば",
-  機体の状態: "経由地でこまめにボルトを締め直し、整備をしておけば",
-  安全な判断: "予備燃料を守り、危ないときは引き返す・待つ・整備を惜しまなければ",
-  危ない飛び方: "雲の中・積乱雲の近く・回転超過を避ければ",
+  [SCORE_LABEL.days]: tr("泊まらずに着ければ", "Arrive without staying overnight"),
+  [SCORE_LABEL.fuel]: tr("排気温度計で最良燃費を探し、向かい風の弱い高度を選べば", "Find best economy with the EGT gauge and pick the altitude with the weakest headwind"),
+  [SCORE_LABEL.condition]: tr("経由地でこまめにボルトを締め直し、整備をしておけば", "Re-tighten the bolts and do maintenance at every stop"),
+  [SCORE_LABEL.safety]: tr("予備燃料を守り、危ないときは引き返す・待つ・整備を惜しまなければ", "Keep the reserve, and don't hold back from turning back, waiting or maintenance when it's risky"),
+  [SCORE_LABEL.risk]: tr("雲の中・積乱雲の近く・回転超過を避ければ", "Stay out of cloud, away from thunderstorms, and below overspeed"),
 };
 
 export interface NextStep {
@@ -221,12 +225,15 @@ const stars = (w: World) => (w.tutorial ? "" : "★".repeat(w.level));
 export function nextStep(world: World, ev: TripEvaluation, p: Progress): NextStep {
   let advice: string;
   const next = NEXT_RANK.find((r) => ev.total < r.from);
-  if (!next) advice = `S ランク（${ev.total} 点）。言うことはない。`;
+  if (!next) advice = tr(`S ランク（${ev.total} 点）。言うことはない。`, `S rank (${ev.total} pts). Nothing more to say.`);
   else {
     // いちばん点を落とした項目（危ない飛び方は、減点の大きさ）
     const weakest = [...ev.lines].sort((a, b) => b.max - b.points - (a.max - a.points))[0];
-    const where = weakest.max > 0 ? `${weakest.label}（${weakest.points} / ${weakest.max}）` : `危ない飛び方（${weakest.points}）`;
-    advice = `${ev.rank} ランク（${ev.total} 点）。${next.rank} まであと ${next.from - ev.total} 点。いちばん取りこぼしたのは${where}だ。${GROW_HINT[weakest.label] ?? ""}、届くぞ。`;
+    const where = weakest.max > 0 ? `${weakest.label}${tr("（", " (")}${weakest.points} / ${weakest.max}${tr("）", ")")}` : `${SCORE_LABEL.risk}${tr("（", " (")}${weakest.points}${tr("）", ")")}`;
+    advice = tr(
+      `${ev.rank} ランク（${ev.total} 点）。${next.rank} まであと ${next.from - ev.total} 点。いちばん取りこぼしたのは${where}だ。${GROW_HINT[weakest.label] ?? ""}、届くぞ。`,
+      `${ev.rank} rank (${ev.total} pts). ${next.from - ev.total} pts to ${next.rank}. You lost the most on ${where}. ${GROW_HINT[weakest.label] ?? "Keep at it"}, and you'll get there.`,
+    );
   }
 
   const list = [...challengeCourses()].sort((a, b) => a.level - b.level);
@@ -235,7 +242,9 @@ export function nextStep(world: World, ev: TripEvaluation, p: Progress): NextSte
     return {
       advice,
       course: untried,
-      courseReason: world.tutorial ? "チュートリアルはおしまいだ。本番の空へ" : `まだ渡っていない ${stars(untried)} のコースだ`,
+      courseReason: world.tutorial
+        ? tr("チュートリアルはおしまいだ。本番の空へ", "Tutorial complete. On to the real skies")
+        : tr(`まだ渡っていない ${stars(untried)} のコースだ`, `A ${stars(untried)} course you haven't crossed yet`),
     };
   }
   // 全部渡ったら、S をとれていないコースのうち点のいちばん低いもの
@@ -244,7 +253,7 @@ export function nextStep(world: World, ev: TripEvaluation, p: Progress): NextSte
     .sort((a, b) => p.best[a.id].total - p.best[b.id].total)[0];
   if (notS) {
     const b = p.best[notS.id];
-    return { advice, course: notS, courseReason: `自己ベストは ${b.rank}（${b.total} 点）。S をねらおう` };
+    return { advice, course: notS, courseReason: tr(`自己ベストは ${b.rank}（${b.total} 点）。S をねらおう`, `Your best is ${b.rank} (${b.total} pts). Go for an S` ) };
   }
   return { advice, course: null, courseReason: "" };
 }

@@ -25,6 +25,11 @@
   --gutter: 20px;
   color-scheme: dark;
 }
+/* 英語版（en.html）は欧文フォント */
+html[lang="en"] {
+  --sans: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+}
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -604,6 +609,8 @@ kbd {
 @media (max-width: 720px) {
   .pillars { grid-template-columns: 1fr; }
   .topnav ul li:not(:last-child) { display: none; }
+  .topnav ul li.nav-lang { display: list-item; }
+  .topnav .nav-lang a { white-space: nowrap; padding: 6px 8px; }
   .flow { grid-template-columns: 1fr; }
   .flow li { display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px 14px; }
   .flow li span { margin: 0; flex: none; }

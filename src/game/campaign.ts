@@ -44,6 +44,7 @@ import type {
 } from "../model/types";
 import { foggedAt, generateWeather, periodOf, surfaceTemp } from "../model/weather";
 import { createFlight, groundElevation, overSea, type FlightState } from "./flight";
+import { tr } from "../i18n";
 
 export interface LegRecord {
   leg: Leg;
@@ -127,8 +128,8 @@ export function newCondition(world: World, setup: Setup): AircraftCondition {
 
 export function setupProblems(world: World, setup: Setup): string[] {
   const p: string[] = [];
-  if (slotsUsed(setup.equipment) > EQUIPMENT_SLOTS) p.push(`装備は ${EQUIPMENT_SLOTS} 枠まで`);
-  if (equipmentKg(setup.equipment) > EQUIPMENT_MAX_KG) p.push(`装備の重さは ${EQUIPMENT_MAX_KG} kg まで`);
+  if (slotsUsed(setup.equipment) > EQUIPMENT_SLOTS) p.push(tr(`装備は ${EQUIPMENT_SLOTS} 枠まで`, `Equipment: ${EQUIPMENT_SLOTS} slots at most`));
+  if (equipmentKg(setup.equipment) > EQUIPMENT_MAX_KG) p.push(tr(`装備の重さは ${EQUIPMENT_MAX_KG} kg まで`, `Equipment weight: ${EQUIPMENT_MAX_KG} kg at most`));
   const first = field(world, world.startId);
   const fuelL = (world.fuelCapacityL * setup.fuelPercent) / 100;
   const dist = takeoffDistance(
@@ -137,7 +138,7 @@ export function setupProblems(world: World, setup: Setup): string[] {
     first.temperature,
     totalWeight(fuelL, equipmentKg(setup.equipment)),
   );
-  if (dist > first.runwayLength) p.push("重すぎて離陸できない");
+  if (dist > first.runwayLength) p.push(tr("重すぎて離陸できない", "Too heavy to take off"));
   return p;
 }
 
@@ -313,13 +314,13 @@ export function takeoffCheck(c: CampaignState) {
 
 export function departureProblems(c: CampaignState): string[] {
   const p: string[] = [];
-  if (isFinished(c)) return ["旅は終わっている"];
-  if (!nextLeg(c)) return ["行き先を選んでいない"];
-  if (!takeoffCheck(c).ok) p.push("重すぎて離陸できない（燃料を減らす）");
-  if (c.clockMin >= c.world.sunsetMin) p.push("日が暮れている（泊まって朝を待つ）");
-  else if (foggedNow(c)) p.push("霧で滑走路が見えない（晴れるのを待つ）");
-  if (c.condition.propDurability <= 0) p.push("プロペラが割れている");
-  if (c.condition.engineHealth <= 0) p.push("エンジンが動かない");
+  if (isFinished(c)) return [tr("旅は終わっている", "The trip is over")];
+  if (!nextLeg(c)) return [tr("行き先を選んでいない", "No destination chosen")];
+  if (!takeoffCheck(c).ok) p.push(tr("重すぎて離陸できない（燃料を減らす）", "Too heavy to take off (carry less fuel)"));
+  if (c.clockMin >= c.world.sunsetMin) p.push(tr("日が暮れている（泊まって朝を待つ）", "It is dark (stay the night and wait for morning)"));
+  else if (foggedNow(c)) p.push(tr("霧で滑走路が見えない（晴れるのを待つ）", "Fog hides the runway (wait for it to clear)"));
+  if (c.condition.propDurability <= 0) p.push(tr("プロペラが割れている", "The propeller is cracked"));
+  if (c.condition.engineHealth <= 0) p.push(tr("エンジンが動かない", "The engine won't run"));
   return p;
 }
 
@@ -333,7 +334,12 @@ export function beginLeg(c: CampaignState): { flight: FlightState; notes: string
     cond.propEdge = Math.max(0, cond.propEdge - d.edgeLoss);
     cond.edgeAsymmetry = Math.min(1, cond.edgeAsymmetry + d.asymmetryGain);
     cond.vibration = vibrationOf(cond);
-    notes.push(`未舗装の滑走路で小石が当たり、前縁が傷んだ（−${d.edgeLoss.toFixed(1)}）`);
+    notes.push(
+      tr(
+        `未舗装の滑走路で小石が当たり、前縁が傷んだ（−${d.edgeLoss.toFixed(1)}）`,
+        `Pebbles on the unpaved runway nicked the leading edge (−${d.edgeLoss.toFixed(1)})`,
+      ),
+    );
   }
   const wx = legWeather(c)!;
   const flight = createFlight({
@@ -387,27 +393,30 @@ export function finishLeg(c: CampaignState, f: FlightState): void {
   const events: string[] = [];
   const cond = clone(f.condition);
   c.setup = { ...c.setup, torqueResult: f.setup.torqueResult };
-  if (returned) events.push(`${f.leg.to.name}へは行かず、${f.leg.from.name}に引き返した`);
+  if (returned) events.push(tr(`${f.leg.to.name}へは行かず、${f.leg.from.name}に引き返した`, `Turned back to ${f.leg.from.name} instead of going on to ${f.leg.to.name}`));
 
   // 飛行中の天気の影響
   if (f.stats.rainMinutes > 0) {
     const avgRpm = f.stats.rainRpmMinutes / f.stats.rainMinutes;
     events.push(
-      `雨の中を ${Math.round(f.stats.rainMinutes)} 分飛んだ（平均 ${Math.round(avgRpm)} rpm）。前縁が削れた（−${f.stats.rainEdgeLoss.toFixed(1)}）。回転数を下げるほど削れ方は減る`,
+      tr(
+        `雨の中を ${Math.round(f.stats.rainMinutes)} 分飛んだ（平均 ${Math.round(avgRpm)} rpm）。前縁が削れた（−${f.stats.rainEdgeLoss.toFixed(1)}）。回転数を下げるほど削れ方は減る`,
+        `Flew ${Math.round(f.stats.rainMinutes)} min in rain (average ${Math.round(avgRpm)} rpm). The leading edge was worn (−${f.stats.rainEdgeLoss.toFixed(1)}). The lower the RPM, the less it wears`,
+      ),
     );
   }
-  if (f.stats.airframeLoss > 0.5) events.push(`揺れで機体が傷んだ（強度 −${f.stats.airframeLoss.toFixed(0)}）`);
-  if (cond.propIce > 1) events.push("プロペラに氷が残っている。地上で溶けた");
+  if (f.stats.airframeLoss > 0.5) events.push(tr(`揺れで機体が傷んだ（強度 −${f.stats.airframeLoss.toFixed(0)}）`, `Turbulence damaged the airframe (strength −${f.stats.airframeLoss.toFixed(0)})`));
+  if (cond.propIce > 1) events.push(tr("プロペラに氷が残っている。地上で溶けた", "There was ice left on the propeller. It melted on the ground"));
   cond.propIce = 0;
   cond.carbIce = 0;
-  if (f.stats.holdMinutes > 0) events.push(`霧が晴れるまで上空で ${Math.round(f.stats.holdMinutes)} 分待った`);
+  if (f.stats.holdMinutes > 0) events.push(tr(`霧が晴れるまで上空で ${Math.round(f.stats.holdMinutes)} 分待った`, `Held overhead for ${Math.round(f.stats.holdMinutes)} min until the fog cleared`));
 
   // 未舗装の滑走路への着陸
   if (leg.to.surface === "unpaved") {
     const d = stoneDamage(nextRandom(c), c.setup.equipment.edgeGear);
     cond.propEdge = Math.max(0, cond.propEdge - d.edgeLoss);
     cond.edgeAsymmetry = Math.min(1, cond.edgeAsymmetry + d.asymmetryGain);
-    events.push(`未舗装の滑走路に着陸。小石で前縁が傷んだ（−${d.edgeLoss.toFixed(1)}）`);
+    events.push(tr(`未舗装の滑走路に着陸。小石で前縁が傷んだ（−${d.edgeLoss.toFixed(1)}）`, `Landed on an unpaved runway. Pebbles nicked the leading edge (−${d.edgeLoss.toFixed(1)})`));
   }
 
   // 湿度の違う土地での滞在（4.6）。引き返したなら同じ土地なので変わらない
@@ -415,18 +424,29 @@ export function finishLeg(c: CampaignState, f: FlightState): void {
   const loss = returned ? 0 : humidityBoltLoss(leg.from.humidity, leg.to.humidity, c.setup.torqueResult);
   cond.boltTightness = Math.max(0, cond.boltTightness - loss);
   if (Math.abs(dh) >= 5) {
-    const why = dh < 0 ? "空気が乾いていて、木のプロペラが縮んだ" : "空気が湿っていて、木のプロペラの厚みが変わった";
+    const why =
+      dh < 0
+        ? tr("空気が乾いていて、木のプロペラが縮んだ", "The air is dry, so the wooden propeller shrank")
+        : tr("空気が湿っていて、木のプロペラの厚みが変わった", "The air is humid, so the wooden propeller swelled");
     events.push(
-      `湿度 ${leg.from.humidity}% → ${leg.to.humidity}%。${why}。ボルトがゆるんだ（−${loss.toFixed(1)}）`,
+      tr(
+        `湿度 ${leg.from.humidity}% → ${leg.to.humidity}%。${why}。ボルトがゆるんだ（−${loss.toFixed(1)}）`,
+        `Humidity ${leg.from.humidity}% → ${leg.to.humidity}%. ${why}. The bolts loosened (−${loss.toFixed(1)})`,
+      ),
     );
   } else if (!returned) {
-    events.push(`湿度は ${leg.from.humidity}% → ${leg.to.humidity}% とあまり変わらない（ボルト −${loss.toFixed(1)}）`);
+    events.push(
+      tr(
+        `湿度は ${leg.from.humidity}% → ${leg.to.humidity}% とあまり変わらない（ボルト −${loss.toFixed(1)}）`,
+        `Humidity barely changed, ${leg.from.humidity}% → ${leg.to.humidity}% (bolts −${loss.toFixed(1)})`,
+      ),
+    );
   }
 
   // 締めすぎは区間ごとに木を傷める
   if (c.setup.torqueResult === "over") {
     cond.propDurability = Math.max(0, cond.propDurability - 10);
-    events.push("ボルトの締めすぎで、木のハブがつぶれてきている（耐久度 −10）");
+    events.push(tr("ボルトの締めすぎで、木のハブがつぶれてきている（耐久度 −10）", "The over-tightened bolts are crushing the wooden hub (durability −10)"));
   }
   cond.vibration = vibrationOf(cond);
 
@@ -443,9 +463,9 @@ export function finishLeg(c: CampaignState, f: FlightState): void {
   s.minBolt = Math.min(s.minBolt, f.condition.boltTightness, cond.boltTightness);
   if (!returned && f.condition.fuelRemaining < RESERVE_FUEL_L) {
     s.lowReserveLandings += 1;
-    events.push(`予備燃料（${RESERVE_FUEL_L} L）を割って着陸した`);
+    events.push(tr(`予備燃料（${RESERVE_FUEL_L} L）を割って着陸した`, `Landed with less than the reserve (${RESERVE_FUEL_L} L)`));
   }
-  if (c.pilot.fatigue >= 60) events.push(`疲れがたまっている（疲労 ${Math.round(c.pilot.fatigue)}）。一晩休めば楽になる`);
+  if (c.pilot.fatigue >= 60) events.push(tr(`疲れがたまっている（疲労 ${Math.round(c.pilot.fatigue)}）。一晩休めば楽になる`, `You are getting tired (fatigue ${Math.round(c.pilot.fatigue)}). A night's rest will help`));
 
   c.records.push({ leg, day: c.day, flightMin: f.elapsedMin, fuelUsed: f.fuelUsed, distanceKm: f.stats.pathKm, returned });
   c.condition = cond;
@@ -477,7 +497,7 @@ function spend(c: CampaignState, min: number) {
 
 export function refuelInfo(c: CampaignState, targetL: number): ActionInfo {
   const add = targetL - c.condition.fuelRemaining;
-  if (Math.abs(add) < 0.05) return { min: 0, ok: false, reason: "量が同じ" };
+  if (Math.abs(add) < 0.05) return { min: 0, ok: false, reason: tr("量が同じ", "Same amount") };
   return { min: REFUEL_MIN, ok: true };
 }
 
@@ -492,7 +512,7 @@ export function refuel(c: CampaignState, targetL: number): void {
 export function retorqueInfo(c: CampaignState): ActionInfo {
   if (c.setup.equipment.toolKit) return { min: TOOLKIT_RETORQUE_MIN, ok: true };
   if (currentPlace(c).hasRepairShop) return { ...SHOP.retorque, ok: true };
-  return { min: 0, ok: false, reason: "工具セットも整備場もない" };
+  return { min: 0, ok: false, reason: tr("工具セットも整備場もない", "No tool kit and no repair shop") };
 }
 
 /** ボルトを締め直す（結果はミニゲームで決まる） */
@@ -515,8 +535,8 @@ function applyTorque(c: CampaignState, result: TorqueResult) {
 }
 
 export function edgeRepairInfo(c: CampaignState): ActionInfo {
-  if (!currentPlace(c).hasRepairShop) return { min: 0, ok: false, reason: "整備場がない" };
-  if (c.condition.propEdge >= 99.9) return { ...SHOP.edge, ok: false, reason: "傷んでいない" };
+  if (!currentPlace(c).hasRepairShop) return { min: 0, ok: false, reason: tr("整備場がない", "No repair shop") };
+  if (c.condition.propEdge >= 99.9) return { ...SHOP.edge, ok: false, reason: tr("傷んでいない", "Not damaged") };
   return { ...SHOP.edge, ok: true };
 }
 
@@ -531,8 +551,8 @@ export function repairEdge(c: CampaignState): void {
 }
 
 export function engineServiceInfo(c: CampaignState): ActionInfo {
-  if (!currentPlace(c).hasRepairShop) return { min: 0, ok: false, reason: "整備場がない" };
-  if (c.condition.engineHealth >= 99.9) return { ...SHOP.engine, ok: false, reason: "調子は良い" };
+  if (!currentPlace(c).hasRepairShop) return { min: 0, ok: false, reason: tr("整備場がない", "No repair shop") };
+  if (c.condition.engineHealth >= 99.9) return { ...SHOP.engine, ok: false, reason: tr("調子は良い", "Running fine") };
   return { ...SHOP.engine, ok: true };
 }
 
@@ -545,8 +565,8 @@ export function serviceEngine(c: CampaignState): void {
 }
 
 export function airframeRepairInfo(c: CampaignState): ActionInfo {
-  if (!currentPlace(c).hasRepairShop) return { min: 0, ok: false, reason: "整備場がない" };
-  if (c.condition.airframe >= 99.9) return { ...SHOP.airframe, ok: false, reason: "傷んでいない" };
+  if (!currentPlace(c).hasRepairShop) return { min: 0, ok: false, reason: tr("整備場がない", "No repair shop") };
+  if (c.condition.airframe >= 99.9) return { ...SHOP.airframe, ok: false, reason: tr("傷んでいない", "Not damaged") };
   return { ...SHOP.airframe, ok: true };
 }
 
@@ -559,7 +579,7 @@ export function repairAirframe(c: CampaignState): void {
 }
 
 export function waitInfo(c: CampaignState): ActionInfo {
-  if (c.clockMin + WAIT_MIN >= c.world.sunsetMin) return { min: WAIT_MIN, ok: false, reason: "待つと日が暮れる" };
+  if (c.clockMin + WAIT_MIN >= c.world.sunsetMin) return { min: WAIT_MIN, ok: false, reason: tr("待つと日が暮れる", "It would get dark") };
   return { min: WAIT_MIN, ok: true };
 }
 
@@ -573,7 +593,7 @@ export function waitForWeather(c: CampaignState): void {
 }
 
 export function propSwapInfo(c: CampaignState): ActionInfo {
-  if (!c.spareAvailable) return { min: 0, ok: false, reason: "予備のプロペラがない" };
+  if (!c.spareAvailable) return { min: 0, ok: false, reason: tr("予備のプロペラがない", "No spare propeller") };
   return { min: PROP_SWAP_MIN, ok: true };
 }
 
@@ -609,9 +629,9 @@ export function rest(c: CampaignState): void {
  */
 export function boltCheckNotice(c: CampaignState): string | null {
   if (!DIFFICULTY[c.difficulty].boltNotice || c.retorquedHere || isFinished(c)) return null;
-  const humid = c.events.find((e) => e.startsWith("湿度") && e.includes("ゆるんだ"));
-  if (humid) return "湿度の違う土地に着いた。ボルトの点検の時期だ。";
-  if (c.condition.boltTightness < 70) return "ボルトがゆるみ気味だ。点検しよう。";
+  const humid = c.events.find((e) => e.startsWith(tr("湿度", "Humidity")) && e.includes(tr("ゆるんだ", "loosened")));
+  if (humid) return tr("湿度の違う土地に着いた。ボルトの点検の時期だ。", "You have landed where the humidity is different. Time to check the bolts.");
+  if (c.condition.boltTightness < 70) return tr("ボルトがゆるみ気味だ。点検しよう。", "The bolts are getting loose. Let's check them.");
   return null;
 }
 

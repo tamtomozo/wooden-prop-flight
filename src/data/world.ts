@@ -9,10 +9,11 @@
 // 天気のひな形と山の位置は、道の a → b の向きで書く。逆向きに飛ぶときは反転する（legBetween）。
 import type { Edge, Leg, Ridge, SeaStretch, Waypoint, WeatherFeature, WeatherTemplate, World } from "../model/types";
 import { headwindAt } from "../model/weather";
+import { tr } from "../i18n";
 
 const minami: Waypoint = {
   id: "minami",
-  name: "みなみ飛行場",
+  name: tr("みなみ飛行場", "Minami Field"),
   elevation: 20,
   runwayLength: 800,
   surface: "paved",
@@ -20,14 +21,14 @@ const minami: Waypoint = {
   humidity: 75,
   temperature: 28,
   dewPoint: 20,
-  description: "海沿いの町の飛行場。格納庫と整備場がある。",
+  description: tr("海沿いの町の飛行場。格納庫と整備場がある。", "A field in a seaside town. It has a hangar and a repair shop."),
   x: 0,
   y: 0,
 };
 
 const kawara: Waypoint = {
   id: "kawara",
-  name: "かわら飛行場",
+  name: tr("かわら飛行場", "Kawara Field"),
   elevation: 40,
   runwayLength: 500,
   surface: "unpaved",
@@ -35,14 +36,14 @@ const kawara: Waypoint = {
   humidity: 85,
   temperature: 27,
   dewPoint: 23,
-  description: "河川敷の草地の滑走路。短くて小石が多い。朝は川霧が出やすい。整備場はない。",
+  description: tr("河川敷の草地の滑走路。短くて小石が多い。朝は川霧が出やすい。整備場はない。", "A grass strip on the riverbank. Short and full of pebbles. River fog is common in the morning. No repair shop."),
   x: 10,
   y: 200,
 };
 
 const hamakaze: Waypoint = {
   id: "hamakaze",
-  name: "はまかぜ飛行場",
+  name: tr("はまかぜ飛行場", "Hamakaze Field"),
   elevation: 10,
   runwayLength: 900,
   surface: "paved",
@@ -50,14 +51,14 @@ const hamakaze: Waypoint = {
   humidity: 80,
   temperature: 27,
   dewPoint: 22.5,
-  description: "海辺の飛行場。滑走路は長く、整備場もある。朝は海霧が出やすい。",
+  description: tr("海辺の飛行場。滑走路は長く、整備場もある。朝は海霧が出やすい。", "A field by the beach. Long runway and a repair shop. Sea fog is common in the morning."),
   x: -160,
   y: 150,
 };
 
 const touge: Waypoint = {
   id: "touge",
-  name: "とうげ飛行場",
+  name: tr("とうげ飛行場", "Touge Field"),
   elevation: 500,
   runwayLength: 480,
   surface: "unpaved",
@@ -65,14 +66,14 @@ const touge: Waypoint = {
   humidity: 55,
   temperature: 20,
   dewPoint: 10,
-  description: "峠の小さな草地の滑走路。とても短いので、重いままでは飛び立てない。",
+  description: tr("峠の小さな草地の滑走路。とても短いので、重いままでは飛び立てない。", "A tiny grass strip on the pass. It is very short, so a heavy plane cannot take off from it."),
   x: 70,
   y: 320,
 };
 
 const takane: Waypoint = {
   id: "takane",
-  name: "たかね飛行場",
+  name: tr("たかね飛行場", "Takane Field"),
   elevation: 900,
   runwayLength: 700,
   surface: "paved",
@@ -80,14 +81,14 @@ const takane: Waypoint = {
   humidity: 35,
   temperature: 20,
   dewPoint: 6,
-  description: "山を越えた先の乾いた高原。整備場がある。",
+  description: tr("山を越えた先の乾いた高原。整備場がある。", "A dry plateau beyond the mountains. It has a repair shop."),
   x: 40,
   y: 420,
 };
 
 const numata: Waypoint = {
   id: "numata",
-  name: "ぬまた飛行場",
+  name: tr("ぬまた飛行場", "Numata Field"),
   elevation: 60,
   runwayLength: 650,
   surface: "paved",
@@ -95,14 +96,14 @@ const numata: Waypoint = {
   humidity: 70,
   temperature: 24,
   dewPoint: 18,
-  description: "北の海沿いの町。整備場がある。",
+  description: tr("北の海沿いの町。整備場がある。", "A northern seaside town. It has a repair shop."),
   x: -190,
   y: 380,
 };
 
 const kita: Waypoint = {
   id: "kita",
-  name: "きた飛行場",
+  name: tr("きた飛行場", "Kita Field"),
   elevation: 120,
   runwayLength: 600,
   surface: "unpaved",
@@ -110,7 +111,7 @@ const kita: Waypoint = {
   humidity: 60,
   temperature: 18,
   dewPoint: 14.5,
-  description: "旅の目的地。北の町の草地の滑走路。夕方は霧が出やすい。",
+  description: tr("旅の目的地。北の町の草地の滑走路。夕方は霧が出やすい。", "The goal of the trip. A grass strip in a northern town. Fog is common in the evening."),
   x: 0,
   y: 640,
 };
@@ -124,7 +125,7 @@ const EDGES: Edge[] = [
     a: "minami",
     b: "kawara",
     cruiseAltitude: 1200,
-    note: "海沿いを北へ。途中に雨雲がかかりやすい。低いほど向かい風が弱い。",
+    note: tr("海沿いを北へ。途中に雨雲がかかりやすい。低いほど向かい風が弱い。", "North along the coast. Rain clouds often sit on the way. The lower you fly, the weaker the headwind."),
     terrain: [],
     weather: {
       winds: winds(0, [15, 25, 40, 45], 7),
@@ -144,8 +145,8 @@ const EDGES: Edge[] = [
     a: "kawara",
     b: "takane",
     cruiseAltitude: 2500,
-    note: "山越え。山の上に雲がかかりやすく、午後は積乱雲が育つ。",
-    terrain: [{ fromKm: 80, toKm: 170, height: 1900, name: "北の山なみ" }],
+    note: tr("山越え。山の上に雲がかかりやすく、午後は積乱雲が育つ。", "Over the mountains. Clouds often cap the peaks, and thunderstorms grow in the afternoon."),
+    terrain: [{ fromKm: 80, toKm: 170, height: 1900, name: tr("北の山なみ", "Northern range") }],
     weather: {
       winds: winds(0, [15, 20, 30, 45]),
       freezingLevel: 3300,
@@ -175,7 +176,7 @@ const EDGES: Edge[] = [
     a: "takane",
     b: "kita",
     cruiseAltitude: 2000,
-    note: "高原から北の平野へ。高いほど追い風が強い。途中に寒冷前線。",
+    note: tr("高原から北の平野へ。高いほど追い風が強い。途中に寒冷前線。", "From the plateau to the northern plain. The higher you fly, the stronger the tailwind. A cold front on the way."),
     terrain: [],
     weather: {
       winds: winds(180, [5, 10, 20, 35]),
@@ -203,8 +204,8 @@ const EDGES: Edge[] = [
     a: "kawara",
     b: "touge",
     cruiseAltitude: 2000,
-    note: "低い峠を越える近道。揺れやすく、午後は積乱雲が出ることも。",
-    terrain: [{ fromKm: 40, toKm: 115, height: 1500, name: "峠の手前の尾根" }],
+    note: tr("低い峠を越える近道。揺れやすく、午後は積乱雲が出ることも。", "A shortcut over a low pass. Often bumpy, and thunderstorms may form in the afternoon."),
+    terrain: [{ fromKm: 40, toKm: 115, height: 1500, name: tr("峠の手前の尾根", "Ridge before the pass") }],
     weather: {
       winds: winds(330, [10, 20, 30, 35]),
       freezingLevel: 3500,
@@ -228,8 +229,8 @@ const EDGES: Edge[] = [
     a: "touge",
     b: "takane",
     cruiseAltitude: 2300,
-    note: "峠から高原へ。尾根に雲がかかりやすい。",
-    terrain: [{ fromKm: 10, toKm: 80, height: 1800, name: "高原のへり" }],
+    note: tr("峠から高原へ。尾根に雲がかかりやすい。", "From the pass to the plateau. Clouds often sit on the ridge."),
+    terrain: [{ fromKm: 10, toKm: 80, height: 1800, name: tr("高原のへり", "Edge of the plateau") }],
     weather: {
       winds: winds(0, [10, 20, 30, 40]),
       freezingLevel: 3300,
@@ -255,7 +256,7 @@ const EDGES: Edge[] = [
     a: "minami",
     b: "hamakaze",
     cruiseAltitude: 1500,
-    note: "海岸線を北西へ。朝は低い雲（海霧）が出やすい。",
+    note: tr("海岸線を北西へ。朝は低い雲（海霧）が出やすい。", "Northwest along the coastline. Low cloud (sea fog) is common in the morning."),
     terrain: [],
     weather: {
       winds: winds(20, [10, 20, 25, 30]),
@@ -274,7 +275,7 @@ const EDGES: Edge[] = [
     a: "kawara",
     b: "hamakaze",
     cruiseAltitude: 1200,
-    note: "川を下って海へ。横風で、ときどき雨。",
+    note: tr("川を下って海へ。横風で、ときどき雨。", "Down the river to the sea. Crosswind, with rain now and then."),
     terrain: [],
     weather: {
       winds: winds(90, [15, 20, 25, 30]),
@@ -294,7 +295,7 @@ const EDGES: Edge[] = [
     a: "hamakaze",
     b: "numata",
     cruiseAltitude: 1500,
-    note: "海岸線をまっすぐ北へ。どの高さでも向かい風。低い雲と雨に注意。",
+    note: tr("海岸線をまっすぐ北へ。どの高さでも向かい風。低い雲と雨に注意。", "Straight north along the coastline. Headwind at every height. Watch out for low cloud and rain."),
     terrain: [],
     weather: {
       winds: winds(0, [25, 30, 35, 40]),
@@ -320,7 +321,7 @@ const EDGES: Edge[] = [
     a: "numata",
     b: "kita",
     cruiseAltitude: 1800,
-    note: "海から内陸の平野へ。追い風。途中に前線の雲と雨。",
+    note: tr("海から内陸の平野へ。追い風。途中に前線の雲と雨。", "From the sea to the inland plain. Tailwind. Frontal cloud and rain on the way."),
     terrain: [],
     weather: {
       winds: winds(200, [10, 20, 30, 35]),
@@ -340,9 +341,9 @@ const EDGES: Edge[] = [
 
 export const WORLD: World = {
   id: "hondo",
-  title: "本土の地図",
-  name: "みなみ → きた",
-  description: "陸の上だけの地図。山越え・峠・海沿いの3つの道。チュートリアルのコースは、ここから道を切り出して作る。",
+  title: tr("本土の地図", "Mainland map"),
+  name: tr("みなみ → きた", "Minami → Kita"),
+  description: tr("陸の上だけの地図。山越え・峠・海沿いの3つの道。チュートリアルのコースは、ここから道を切り出して作る。", "A map over land only. Three ways: over the mountains, through the pass, along the coast. The tutorial courses are cut out of it."),
   history: "",
   level: 1,
   fields: [minami, kawara, hamakaze, touge, takane, numata, kita],

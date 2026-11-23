@@ -3,6 +3,7 @@
 import { paramLine, type ParamId } from "../game/mechanicLines";
 import type { AircraftCondition } from "../model/types";
 import { conditionRows, type ConditionRow, type Level } from "./dialog";
+import { tr } from "../i18n";
 
 export interface InspectionOptions {
   /** 数値も出す */
@@ -94,7 +95,7 @@ export function inspectionHtml(c: AircraftCondition, o: InspectionOptions): stri
       ${blade(20)}${blade(200)}
       <circle cx="${IX}" cy="${IY}" r="18" fill="#6b7078" stroke="#2b2e33" stroke-width="2" />
       ${bolts}
-      <text class="cap" x="${IX}" y="${IY + IR + 18}" text-anchor="middle">正面から見たプロペラ</text>
+      <text class="cap" x="${IX}" y="${IY + IR + 18}" text-anchor="middle">${tr("正面から見たプロペラ", "Propeller from the front")}</text>
     </g>
     <!-- 横の絵のプロペラと、拡大図をつなぐ点線 -->
     <line x1="${X(51) + 6}" y1="${Y(-23)}" x2="${IX - IR * 0.7}" y2="${IY - IR * 0.7}" class="zoom" />
@@ -138,16 +139,16 @@ export function inspectionHtml(c: AircraftCondition, o: InspectionOptions): stri
       : issues.length
         ? `<ul class="issues">${issues
             .map(
-              (r) => `<li class="${r.level}"><b>${r.id} ${r.name}：${r.word}${o.details ? `（${Math.round(r.value)}）` : ""}</b>
-                <span>整備士：${paramLine(r.id as ParamId, o.haste!)}</span></li>`,
+              (r) => `<li class="${r.level}"><b>${r.id} ${r.name}${tr("：", ": ")}${r.word}${o.details ? ` (${Math.round(r.value)})` : ""}</b>
+                <span>${tr("整備士：", "Mechanic: ")}${paramLine(r.id as ParamId, o.haste!)}</span></li>`,
             )
             .join("")}</ul>`
         : o.plain
           ? ""
-          : `<p class="issues-none small">気になるところはない。</p>`;
+          : `<p class="issues-none small">${tr("気になるところはない。", "Nothing to worry about.")}</p>`;
 
   return `<div class="inspection">
-    <svg viewBox="0 0 820 322" role="img" aria-label="機体の点検図">
+    <svg viewBox="0 0 820 322" role="img" aria-label="${tr("機体の点検図", "Aircraft inspection diagram")}">
       ${side}
       ${inset}
       ${labels}
@@ -181,4 +182,11 @@ function vibrationMarks(color: string, level: Level, plain: boolean) {
   }).join("");
 }
 
-const shortName = (name: string) => name.replace("プロペラの", "").replace("の締まり", "").replace("の調子", "").replace("の強度", "");
+const shortName = (name: string) =>
+  tr(
+    name.replace("プロペラの", "").replace("の締まり", "").replace("の調子", "").replace("の強度", ""),
+    name
+      .replace(/^Prop /, "")
+      .replace(/ (tightness|health|strength)$/, "")
+      .replace(/^./, (c) => c.toUpperCase()),
+  );

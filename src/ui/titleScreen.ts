@@ -1,3 +1,4 @@
+import { isEn, switchLang, tr } from "../i18n";
 // タイトル画面：後ろで機体がひとりでに飛ぶ景色の上に題名を出し、画面の下に「Enter かスペースではじめる」を出す。
 // 計器盤や上の帯は隠して、景色を画面いっぱいに見せる。画面のどこを押しても（Enter／スペースでも）はじまる。
 
@@ -25,14 +26,25 @@ let onClick: (() => void) | null = null;
 export function showTitle(onStart: () => void) {
   title.innerHTML = `<div class="title-inner">
     ${PROP_SVG}
-    <p class="title-kicker">海の向こう・山の向こうへ</p>
-    <h1>木製プロペラ<br />長距離飛行</h1>
-    <p class="title-lead">木のプロペラ機で、海峡・諸島・山脈・大洋を飛びこえる。<br />燃料と天気と、引き返す勇気がすべて。</p>
+    <p class="title-kicker">${tr("海の向こう・山の向こうへ", "Beyond the sea, beyond the mountains")}</p>
+    <h1>${tr("木製プロペラ<br />長距離飛行", "Wooden Prop<br />Long Flight")}</h1>
+    <p class="title-lead">${tr(
+      "木のプロペラ機で、海峡・諸島・山脈・大洋を飛びこえる。<br />燃料と天気と、引き返す勇気がすべて。",
+      "Fly a wooden-propeller plane over straits, islands, mountain ranges and oceans.<br />Fuel, weather, and the courage to turn back are everything.",
+    )}</p>
   </div>
-  <a class="title-lp" href="./lp/index.html">ゲームの紹介ページ</a>
-  <p class="title-start">Enter かスペースではじめる</p>`;
+  <div class="title-links">
+    <button class="title-lang" lang="${isEn ? "ja" : "en"}">${isEn ? "日本語" : "English"}</button>
+    <a class="title-lp" href="${tr("./lp/index.html", "./lp/en.html")}">${tr("ゲームの紹介ページ", "About this game")}</a>
+  </div>
+  <p class="title-start">${tr("Enter かスペースではじめる", "Press Enter or Space to start")}</p>`;
   // 紹介ページへのリンクを押したときは、ゲームをはじめずにリンク先へ進む
   title.querySelector<HTMLAnchorElement>(".title-lp")!.addEventListener("click", (e) => e.stopPropagation());
+  // 言語の切り替え（ページを読み直す）
+  title.querySelector<HTMLButtonElement>(".title-lang")!.addEventListener("click", (e) => {
+    e.stopPropagation();
+    switchLang(isEn ? "ja" : "en");
+  });
 
   const leave = () => {
     hideTitle();
@@ -41,8 +53,8 @@ export function showTitle(onStart: () => void) {
   removeListeners();
   onKey = (e) => {
     if (e.key !== "Enter" && e.key !== " ") return;
-    // Tab でリンクを選んで Enter を押したときは、リンクを開く
-    if (e.target instanceof HTMLAnchorElement) return;
+    // Tab でリンクやボタンを選んで Enter を押したときは、そちらを押す
+    if (e.target instanceof HTMLAnchorElement || e.target instanceof HTMLButtonElement) return;
     e.preventDefault();
     leave();
   };

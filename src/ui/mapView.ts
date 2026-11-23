@@ -2,6 +2,7 @@
 // 行ける飛行場は data-act="dest" でクリックできる（setActions で受け取る）。
 import { edgeDistance, field, seaKm, seaStretches } from "../data/world";
 import type { World } from "../model/types";
+import { tr } from "../i18n";
 
 export interface MapOptions {
   /** 今いる飛行場 */
@@ -19,7 +20,7 @@ export interface MapOptions {
 }
 
 const PAD = 46;
-const short = (name: string) => name.replace("飛行場", "");
+const short = (name: string) => name.replace(tr("飛行場", " Field"), "");
 
 export function mapSvg(w: World, o: MapOptions): string {
   const xs = w.fields.map((f) => f.x);
@@ -85,7 +86,7 @@ export function mapSvg(w: World, o: MapOptions): string {
         <line x1="${px(a.x)}" y1="${py(a.y)}" x2="${px(b.x)}" y2="${py(b.y)}" />
         ${seaLines}
         ${mountains}
-        ${o.mini ? "" : `<text class="km ${sea.length ? "sea" : ""}" x="${mx}" y="${my}" text-anchor="middle">${D}km${sea.length ? `（海${seaKm({ sea })}）` : ""}</text>`}
+        ${o.mini ? "" : `<text class="km ${sea.length ? "sea" : ""}" x="${mx}" y="${my}" text-anchor="middle">${D}km${sea.length ? tr(`（海${seaKm({ sea })}）`, ` (sea ${seaKm({ sea })})`) : ""}</text>`}
       </g>`;
     })
     .join("");
@@ -108,18 +109,21 @@ export function mapSvg(w: World, o: MapOptions): string {
       const right = f.labelSide ? f.labelSide === "right" : f.x < 0 || f.x >= 40;
       const lx = right ? x + 16 * k : x - 16 * k;
       const anchor = right ? "start" : "end";
-      const tip = `${f.name}　滑走路 ${f.runwayLength} m・${f.surface === "paved" ? "舗装" : "未舗装"}・整備場${f.hasRepairShop ? "あり" : "なし"}・湿度 ${f.humidity}%`;
+      const tip = tr(
+      `${f.name}　滑走路 ${f.runwayLength} m・${f.surface === "paved" ? "舗装" : "未舗装"}・整備場${f.hasRepairShop ? "あり" : "なし"}・湿度 ${f.humidity}%`,
+      `${f.name}  runway ${f.runwayLength} m · ${f.surface === "paved" ? "paved" : "unpaved"} · ${f.hasRepairShop ? "repair shop" : "no repair shop"} · humidity ${f.humidity}%`,
+    );
       return `<g class="${cls}" ${selectable ? `data-act="dest" data-id="${f.id}" role="button" tabindex="0"` : ""}>
         <title>${tip}</title>
         ${selectable ? `<circle class="hit" cx="${x}" cy="${y}" r="26" />` : ""}
         ${f.id === o.current ? `<circle class="here" cx="${x}" cy="${y}" r="${17 * k}" />` : ""}
         <circle class="dot" cx="${x}" cy="${y}" r="${9 * k}" />
-        ${f.hasRepairShop && !o.mini ? `<text class="shop" x="${x}" y="${y + 4}" text-anchor="middle">整</text>` : ""}
+        ${f.hasRepairShop && !o.mini ? `<text class="shop" x="${x}" y="${y + 4}" text-anchor="middle">${tr("整", "R")}</text>` : ""}
         ${f.id === w.goalId ? `<text class="flag" x="${x}" y="${y - 16 * k}" text-anchor="middle" ${o.mini ? `style="font-size:${20 * k}px"` : ""}>★</text>` : ""}
         <text class="name" x="${lx}" y="${y + (o.mini ? 7 * k : -2)}" text-anchor="${anchor}" ${
           o.mini ? `style="font-size:${19 * k}px;stroke-width:${5 * k}px"` : ""
         }>${short(f.name)}</text>
-        ${o.mini ? "" : `<text class="sub" x="${lx}" y="${y + 18}" text-anchor="${anchor}">${f.runwayLength}m${f.surface === "unpaved" ? "・草地" : ""}</text>`}
+        ${o.mini ? "" : `<text class="sub" x="${lx}" y="${y + 18}" text-anchor="${anchor}">${f.runwayLength}m${f.surface === "unpaved" ? tr("・草地", " grass") : ""}</text>`}
       </g>`;
     })
     .join("");
@@ -129,11 +133,11 @@ export function mapSvg(w: World, o: MapOptions): string {
     .map((poly) => `<path class="land-shape" d="M${poly.map(([x, y]) => `${px(x).toFixed(1)},${py(y).toFixed(1)}`).join(" L")} Z" />`)
     .join("");
 
-  return `<svg class="worldmap${o.mini ? " mini" : ""}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" aria-label="地図">
+  return `<svg class="worldmap${o.mini ? " mini" : ""}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" aria-label="${tr("地図", "Map")}">
     <clipPath id="map-clip-${w.id}"><rect x="0" y="0" width="${W}" height="${H}" rx="14" /></clipPath>
     <rect class="${w.land ? "sea" : "land"}" x="0" y="0" width="${W}" height="${H}" rx="14" />
     <g clip-path="url(#map-clip-${w.id})">${land}</g>
-    <text class="north" x="${W - 22}" y="30" text-anchor="middle">北↑</text>
+    <text class="north" x="${W - 22}" y="30" text-anchor="middle">${tr("北↑", "N↑")}</text>
     ${edges}
     ${fields}
   </svg>`;
@@ -141,11 +145,11 @@ export function mapSvg(w: World, o: MapOptions): string {
 
 /** 地図の凡例 */
 export const mapLegend = (w: World) => `<p class="map-legend small">
-  ${w.land ? `<span><i class="lg line-sea"></i>海の上（降りられる場所がない）</span>` : ""}
-  <span><i class="lg dot-paved"></i>舗装</span>
-  <span><i class="lg dot-unpaved"></i>未舗装（小石で前縁が傷む）</span>
-  <span>整＝整備場あり</span>
-  ${w.edges.some((e) => e.terrain.length) ? "<span>▲＝山越え</span>" : ""}
-  <span><i class="lg line-suggested"></i>目的地へのいちばん近い道順</span>
+  ${w.land ? `<span><i class="lg line-sea"></i>${tr("海の上（降りられる場所がない）", "Over water (nowhere to land)")}</span>` : ""}
+  <span><i class="lg dot-paved"></i>${tr("舗装", "Paved")}</span>
+  <span><i class="lg dot-unpaved"></i>${tr("未舗装（小石で前縁が傷む）", "Unpaved (pebbles nick the leading edge)")}</span>
+  <span>${tr("整＝整備場あり", "R = repair shop")}</span>
+  ${w.edges.some((e) => e.terrain.length) ? tr("<span>▲＝山越え</span>", "<span>▲ = mountains</span>") : ""}
+  <span><i class="lg line-suggested"></i>${tr("目的地へのいちばん近い道順", "Shortest way to the goal")}</span>
 </p>`;
 

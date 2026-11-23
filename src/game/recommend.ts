@@ -8,6 +8,7 @@ import type { Difficulty, Equipment, Leg, PitchLevel, Setup, World } from "../mo
 import { surfaceTemp } from "../model/weather";
 import { chooseDestination, startCampaign } from "./campaign";
 import { estimateNextLeg } from "./planner";
+import { plural, tr } from "../i18n";
 
 export interface Recommendation {
   pitch: PitchLevel;
@@ -29,7 +30,10 @@ const MIXED_SEA_KM = 300;
 /** 経由地を出るのは、だいたいこの時刻（離陸距離の気温に使う） */
 const WAYPOINT_DEPART_MIN = 10 * 60;
 
-const PITCH_NAME: Record<PitchLevel, string> = { 1: "上昇型", 2: "やや上昇", 3: "中間", 4: "やや巡航", 5: "巡航型" };
+const PITCH_NAME: Record<PitchLevel, string> = tr(
+  { 1: "上昇型", 2: "やや上昇", 3: "中間", 4: "やや巡航", 5: "巡航型" },
+  { 1: "climb", 2: "climb-ish", 3: "middle", 4: "cruise-ish", 5: "cruise" },
+);
 
 /** 最初の行き先 destination を通って目的地まで、いちばん近い道順で行くときの区間 */
 function plannedLegs(w: World, destination: string): Leg[] {
@@ -58,27 +62,36 @@ function chooseEquipment(w: World, legs: Leg[], dropSpare: boolean): { equipment
     tryAdd(
       () => (e.weatherRadio = true),
       () => (e.weatherRadio = false),
-      `気象ラジオ：${sea ? "海の上では引き返す判断が命だ。" : ""}${stormy ? "積乱雲の出る道だ。" : ""}飛びながら予報を確かめろ`,
+      tr(
+        `気象ラジオ：${sea ? "海の上では引き返す判断が命だ。" : ""}${stormy ? "積乱雲の出る道だ。" : ""}飛びながら予報を確かめろ`,
+        `Weather radio: ${sea ? "Over the sea, the call to turn back is everything. " : ""}${stormy ? "Thunderstorms form on this route. " : ""}Check the forecast as you fly`,
+      ),
     );
   if (unpaved.length || rainy) {
     const gear = unpaved.length >= 3 ? "metal" : "tape";
     tryAdd(
       () => (e.edgeGear = gear),
       () => (e.edgeGear = "none"),
-      `${gear === "metal" ? "金属の前縁カバー" : "前縁保護テープ"}：${unpaved.length ? `草地の滑走路が ${unpaved.length} か所` : ""}${unpaved.length && rainy ? "、" : ""}${rainy ? "雨の出る区間がある" : ""}`,
+      tr(
+        `${gear === "metal" ? "金属の前縁カバー" : "前縁保護テープ"}：${unpaved.length ? `草地の滑走路が ${unpaved.length} か所` : ""}${unpaved.length && rainy ? "、" : ""}${rainy ? "雨の出る区間がある" : ""}`,
+        `${gear === "metal" ? "Metal edge cover" : "Leading-edge tape"}: ${unpaved.length ? `${plural(unpaved.length, "grass runway")}` : ""}${unpaved.length && rainy ? ", and " : ""}${rainy ? "legs with rain" : ""}`,
+      ),
     );
   }
   if (noShop.length)
     tryAdd(
       () => (e.toolKit = true),
       () => (e.toolKit = false),
-      `工具セット：${noShop.map((f) => f.name).join("・")}には整備場がない。湿度が変わったら自分で締め直せ`,
+      tr(
+        `工具セット：${noShop.map((f) => f.name).join("・")}には整備場がない。湿度が変わったら自分で締め直せ`,
+        `Tool kit: ${noShop.map((f) => f.name).join(", ")} ${noShop.length > 1 ? "have" : "has"} no repair shop. When the humidity changes, re-tighten the bolts yourself`,
+      ),
     );
   if (!dropSpare && !sea)
     tryAdd(
       () => (e.spareProp = true),
       () => (e.spareProp = false),
-      "予備のプロペラ：陸の上なら、割れても畑に降りて付け替えられる",
+      tr("予備のプロペラ：陸の上なら、割れても畑に降りて付け替えられる", "Spare propeller: over land, if one cracks you can land in a field and swap it"),
     );
   return { equipment: e, reasons };
 }
@@ -104,18 +117,26 @@ export function recommendSetup(w: World, destination: string, difficulty: Diffic
         continue;
       }
       const reasons = [
-        tooShort
-          ? `ピッチ ${pitch}（${PITCH_NAME[pitch]}）：${tooShort.name}の滑走路は ${tooShort.runwayLength} m しかない。次の区間の燃料を積んでも飛び立てるよう、上昇型に寄せた`
-          : mixed
-          ? `ピッチ ${pitch}（${PITCH_NAME[pitch]}）：${longestSea} km の海と ${ridge} m の山の両方がある。プロペラは途中で替えられないから、まん中で両立させる。山の手前では燃料を軽くしておけ`
-          : ridge >= MOUNTAIN_M
-          ? `ピッチ ${pitch}（${PITCH_NAME[pitch]}）：${ridge} m の山を越える。上昇の力を優先した`
-          : longestSea >= LONG_SEA_KM
-            ? `ピッチ ${pitch}（${PITCH_NAME[pitch]}）：${longestSea} km の海を一気に渡る。速さ＝航続距離だ`
-            : `ピッチ ${pitch}（${PITCH_NAME[pitch]}）：山はない。巡航寄りで燃費を稼ぐ`,
+        `${tr(`ピッチ ${pitch}（${PITCH_NAME[pitch]}）：`, `Pitch ${pitch} (${PITCH_NAME[pitch]}): `)}${
+          tooShort
+            ? tr(
+                `${tooShort.name}の滑走路は ${tooShort.runwayLength} m しかない。次の区間の燃料を積んでも飛び立てるよう、上昇型に寄せた`,
+                `the runway at ${tooShort.name} is only ${tooShort.runwayLength} m. Shifted toward climb so you can take off with the next leg's fuel`,
+              )
+            : mixed
+              ? tr(
+                  `${longestSea} km の海と ${ridge} m の山の両方がある。プロペラは途中で替えられないから、まん中で両立させる。山の手前では燃料を軽くしておけ`,
+                  `there is both ${longestSea} km of sea and a ${ridge} m mountain. You can't change the propeller on the way, so go for the middle. Keep the fuel light before the mountains`,
+                )
+              : ridge >= MOUNTAIN_M
+                ? tr(`${ridge} m の山を越える。上昇の力を優先した`, `you'll cross ${ridge} m mountains. Climb power comes first`)
+                : longestSea >= LONG_SEA_KM
+                  ? tr(`${longestSea} km の海を一気に渡る。速さ＝航続距離だ`, `you'll cross ${longestSea} km of sea in one go. Speed means range`)
+                  : tr("山はない。巡航寄りで燃費を稼ぐ", "no mountains. Lean toward cruise to save fuel")
+        }`,
         plan.reason,
         ...gearReasons,
-        dropSpare ? "予備のプロペラは重すぎて、短い滑走路から飛び立てなくなるので外した" : "",
+        dropSpare ? tr("予備のプロペラは重すぎて、短い滑走路から飛び立てなくなるので外した", "Left the spare propeller behind: it is too heavy to take off from the short runways") : "",
       ].filter(Boolean);
       return { pitch, fuelPercent: plan.fuelPercent, equipment, reasons };
     }
@@ -125,7 +146,12 @@ export function recommendSetup(w: World, destination: string, difficulty: Diffic
     pitch: 1,
     fuelPercent: 50,
     equipment: { ...NO_EQUIPMENT },
-    reasons: ["この道は、どのピッチでも満足に飛び立てない。上昇型で、燃料は経由地ごとに必要なぶんだけにしろ"],
+    reasons: [
+      tr(
+        "この道は、どのピッチでも満足に飛び立てない。上昇型で、燃料は経由地ごとに必要なぶんだけにしろ",
+        "On this route no pitch takes off comfortably. Use a climb prop and carry only what each leg needs",
+      ),
+    ],
   };
 }
 
@@ -163,11 +189,20 @@ function planFuel(
         pct -= 5;
       firstFuel = pct;
       const sea = seaKm(leg);
-      const where = `${field(w, leg.to.id).name}まで ${leg.distanceKm} km${sea ? `（海の上 ${sea} km）` : ""}`;
+      const where = tr(
+        `${field(w, leg.to.id).name}まで ${leg.distanceKm} km${sea ? `（海の上 ${sea} km）` : ""}`,
+        `${leg.distanceKm} km to ${field(w, leg.to.id).name}${sea ? ` (${sea} km over water)` : ""}`,
+      );
       reason =
         want > w.fuelCapacityL
-          ? `燃料 満タン：${where}。見積もりは約 ${Math.round(est.fuelL)} L。余裕はあまりない。最良燃費で飛び、引き返し限界点に気をつけろ`
-          : `燃料 ${pct}%（${Math.round((w.fuelCapacityL * pct) / 100)} L）：${where}。見積もり約 ${Math.round(est.fuelL)} L に、${sea ? "海の上なので多めの" : ""}余裕と予備 ${RESERVE_FUEL_L} L を足した。軽いほど上昇が楽だ`;
+          ? tr(
+              `燃料 満タン：${where}。見積もりは約 ${Math.round(est.fuelL)} L。余裕はあまりない。最良燃費で飛び、引き返し限界点に気をつけろ`,
+              `Fuel full: ${where}. Estimated about ${Math.round(est.fuelL)} L. Not much margin. Fly at best economy and watch the point of no return`,
+            )
+          : tr(
+              `燃料 ${pct}%（${Math.round((w.fuelCapacityL * pct) / 100)} L）：${where}。見積もり約 ${Math.round(est.fuelL)} L に、${sea ? "海の上なので多めの" : ""}余裕と予備 ${RESERVE_FUEL_L} L を足した。軽いほど上昇が楽だ`,
+              `Fuel ${pct}% (${Math.round((w.fuelCapacityL * pct) / 100)} L): ${where}. Estimated about ${Math.round(est.fuelL)} L, plus ${sea ? "an extra-large margin for the sea" : "a margin"} and the ${RESERVE_FUEL_L} L reserve. The lighter you are, the easier the climb`,
+            );
     }
   }
   return { fuelPercent: firstFuel, reason };

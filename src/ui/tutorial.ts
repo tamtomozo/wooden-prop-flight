@@ -2,6 +2,7 @@
 // 説明のカードは、光らせた計器にかぶらない場所に出す。
 import { scriptedIndex, type TutorialContext, type TutorialStep } from "../game/tutorial";
 import type { FlightState } from "../game/flight";
+import { tr } from "../i18n";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const PAD = 5;
@@ -55,27 +56,27 @@ export class TutorialView {
     const idx = scriptedIndex(step);
     this.card.innerHTML = `
       <div class="tut-head">
-        <span class="tut-badge ${step.urgent ? "urgent" : ""}">${idx ? `チュートリアル ${idx.n} / ${idx.of}` : step.urgent ? "注意" : "チュートリアル"}</span>
-        <span class="tut-paused">一時停止中</span>
+        <span class="tut-badge ${step.urgent ? "urgent" : ""}">${idx ? `${tr("チュートリアル", "Tutorial")} ${idx.n} / ${idx.of}` : step.urgent ? tr("注意", "Caution") : tr("チュートリアル", "Tutorial")}</span>
+        <span class="tut-paused">${tr("一時停止中", "Paused")}</span>
       </div>
       <h3>${step.title}</h3>
       <p class="tut-intro">${step.intro(f, ctx)}</p>
-      <h4>見る計器・使うもの</h4>
+      <h4>${tr("見る計器・使うもの", "What to look at and use")}</h4>
       <ol class="tut-meters">${step.meters
         .map((m, i) => `<li><span class="tut-num">${NUM[i] ?? i + 1}</span><span><b>${m.name}</b>　${m.text}</span></li>`)
         .join("")}</ol>
-      <h4>正しい操作</h4>
+      <h4>${tr("正しい操作", "What to do")}</h4>
       <p class="tut-action">${step.action(f, ctx)}</p>
       ${
         !step.task
           ? ""
           : step.task.done(f)
-            ? `<p class="tut-try">今はもうできている。この先も同じようにしよう。</p>`
-            : `<p class="tut-try">やってみよう：<b>${step.task.text}</b><small>再開したあとも、画面の下に出しておく</small></p>`
+            ? `<p class="tut-try">${tr("今はもうできている。この先も同じようにしよう。", "You are already doing it. Keep it up from here on.")}</p>`
+            : `<p class="tut-try">${tr("やってみよう：", "Try it: ")}<b>${step.task.text}</b><small>${tr("再開したあとも、画面の下に出しておく", "This stays at the bottom of the screen after you resume")}</small></p>`
       }
       <div class="tut-buttons">
-        <button class="tut-skip" data-tut="skip" title="この旅では、もう説明を出さない">説明をとばす</button>
-        <button class="primary" data-tut="close">わかった — 飛行を再開<small>Enter / スペース</small></button>
+        <button class="tut-skip" data-tut="skip" title="${tr("この旅では、もう説明を出さない", "No more explanations on this trip")}">${tr("説明をとばす", "Skip explanations")}</button>
+        <button class="primary" data-tut="close">${tr("わかった — 飛行を再開", "Got it — resume flight")}<small>${tr("Enter / スペース", "Enter / Space")}</small></button>
       </div>`;
     this.card.hidden = false;
     this.shade.style.display = "";
@@ -103,13 +104,13 @@ export class TutorialView {
     clearTimeout(this.chipTimer);
     this.chip.classList.remove("done");
     this.chip.hidden = !text;
-    if (text) this.chip.innerHTML = `<span class="tut-chip-label">やってみよう</span>${text}`;
+    if (text) this.chip.innerHTML = `<span class="tut-chip-label">${tr("やってみよう", "Try it")}</span>${text}`;
   }
 
   /** 「やってみよう」ができた */
   taskDone() {
     this.chip.classList.add("done");
-    this.chip.innerHTML = `<span class="tut-chip-label">できた！</span>その調子`;
+    this.chip.innerHTML = `<span class="tut-chip-label">${tr("できた！", "Done!")}</span>${tr("その調子", "Keep it up")}`;
     this.chip.hidden = false;
     clearTimeout(this.chipTimer);
     this.chipTimer = window.setTimeout(() => (this.chip.hidden = true), 2500);

@@ -1,4 +1,7 @@
 import "./style.css";
+import { localizeStatic, plural, tr } from "./i18n";
+
+localizeStatic();
 import { GAME_MINUTES_PER_SECOND, HASTE_RELIEF, RESERVE_FUEL_L } from "./config";
 import { DIFFICULTY } from "./data/difficulty";
 import { NO_EQUIPMENT } from "./data/equipment";
@@ -120,7 +123,7 @@ try {
   backScene = new BackScene($<HTMLCanvasElement>("#scene3d"));
 } catch {
   // WebGL が使えない環境では景色を出さない（計器とルートバーだけで飛べる）
-  $(".stage").insertAdjacentHTML("afterbegin", `<p class="no-webgl">この環境では3Dの景色を表示できません（WebGL が使えません）。計器とルートバーで飛べます。</p>`);
+  $(".stage").insertAdjacentHTML("afterbegin", tr(`<p class="no-webgl">この環境では3Dの景色を表示できません（WebGL が使えません）。計器とルートバーで飛べます。</p>`, `<p class="no-webgl">This browser cannot show the 3D view (WebGL is not available). You can still fly with the gauges and the route bar.</p>`));
 }
 
 const throttleInput = $<HTMLInputElement>("#throttle");
@@ -135,7 +138,7 @@ const sound = new Sound();
 const soundBtn = $<HTMLButtonElement>("#sound");
 function setSound(on: boolean) {
   sound.setEnabled(on);
-  soundBtn.textContent = on ? "音：オン" : "音：オフ";
+  soundBtn.textContent = on ? tr("音：オン", "Sound: on") : tr("音：オフ", "Sound: off");
   try {
     localStorage.setItem(SOUND_KEY, on ? "on" : "off");
   } catch {
@@ -156,11 +159,11 @@ function updateHud() {
   const f = flight;
   $("#route").innerHTML = `${f.leg.from.name}<span class="arrow">→</span>${f.leg.to.name}`;
   $("#clock").textContent = fmtClock(campaign && !running && isDialogShowingField() ? campaign.clockMin : clockMin(f));
-  $("#day").textContent = `${campaign?.day ?? 1}日目`;
+  $("#day").textContent = tr(`${campaign?.day ?? 1}日目`, `Day ${campaign?.day ?? 1}`);
   const w = Math.round(f.env.headwind);
-  $("#hud-wind").textContent = w >= 0 ? `向かい風 ${w} km/h` : `追い風 ${-w} km/h`;
-  $("#hud-alt").textContent = `高度 ${Math.round(f.altitude)} m・${f.holding ? "霧で待機中" : f.returning ? "引き返し中" : PHASE_LABEL[f.phase]}`;
-  $("#hud-oat").textContent = `外気温 ${Math.round(f.env.temp)}℃`;
+  $("#hud-wind").textContent = w >= 0 ? tr(`向かい風 ${w} km/h`, `Headwind ${w} km/h`) : tr(`追い風 ${-w} km/h`, `Tailwind ${-w} km/h`);
+  $("#hud-alt").textContent = `${tr("高度", "Alt")} ${Math.round(f.altitude)} m${tr("・", " · ")}${f.holding ? tr("霧で待機中", "Holding for fog") : f.returning ? tr("引き返し中", "Turning back") : PHASE_LABEL[f.phase]}`;
+  $("#hud-oat").textContent = tr(`外気温 ${Math.round(f.env.temp)}℃`, `OAT ${Math.round(f.env.temp)}°C`);
   cockpit.update(f, showDetails, running && !paused);
 }
 const isDialogShowingField = () => !$("#overlay").hidden;
@@ -274,23 +277,32 @@ function confirmTurnBack() {
   const need = returnFuelNeeded(f);
   // 海の上の区間では、戻るだけの燃料があるかを見せる（引き返し限界点）
   const fuelCheck = f.leg.sea.length
-    ? `<p class="${canReturn(f) ? "ok" : "ng"}">戻るのに要る燃料の見積もり：約 ${need.toFixed(0)} L（予備 ${RESERVE_FUEL_L} L は別）。${
+    ? `<p class="${canReturn(f) ? "ok" : "ng"}">${tr(
+        `戻るのに要る燃料の見積もり：約 ${need.toFixed(0)} L（予備 ${RESERVE_FUEL_L} L は別）。`,
+        `Estimated fuel to get back: about ${need.toFixed(0)} L (plus the ${RESERVE_FUEL_L} L reserve). `,
+      )}${
         canReturn(f)
-          ? "まだ戻れる。"
+          ? tr("まだ戻れる。", "You can still make it back.")
           : f.condition.fuelRemaining >= need
-            ? "戻れても、予備燃料はほとんど残らない。"
-            : "<b>引き返し限界点を越えている。戻る途中で燃料が尽きる。</b>"
+            ? tr("戻れても、予備燃料はほとんど残らない。", "You might make it back, but with almost no reserve left.")
+            : tr("<b>引き返し限界点を越えている。戻る途中で燃料が尽きる。</b>", "<b>You are past the point of no return. The fuel will run out on the way back.</b>")
       }</p>`
     : "";
   openDialog(
-    `<h2>引き返しますか？</h2>
-    <p>180度旋回して、${f.leg.from.name}へ戻ります。ここまで ${f.distanceFlown.toFixed(0)} km 飛んできた。燃料は ${f.condition.fuelRemaining.toFixed(1)} L。</p>
+    `<h2>${tr("引き返しますか？", "Turn back?")}</h2>
+    <p>${tr(
+      `180度旋回して、${f.leg.from.name}へ戻ります。ここまで ${f.distanceFlown.toFixed(0)} km 飛んできた。燃料は ${f.condition.fuelRemaining.toFixed(1)} L。`,
+      `Turn 180° and fly back to ${f.leg.from.name}. You have flown ${f.distanceFlown.toFixed(0)} km so far. Fuel: ${f.condition.fuelRemaining.toFixed(1)} L.`,
+    )}</p>
     ${fuelCheck}
-    <p class="small">勇気ある撤退：焦りが ${HASTE_RELIEF} 下がり、最後の評価でボーナスがつく。</p>
-    ${mechanicLine("一番大事なのは引き返す勇気だ。降りて待つのも正しい判断だぞ。")}
+    <p class="small">${tr(
+      `勇気ある撤退：焦りが ${HASTE_RELIEF} 下がり、最後の評価でボーナスがつく。`,
+      `A brave retreat: haste drops by ${HASTE_RELIEF}, and you get a bonus in the final score.`,
+    )}</p>
+    ${mechanicLine(tr("一番大事なのは引き返す勇気だ。降りて待つのも正しい判断だぞ。", "The most important thing is the courage to turn back. Landing and waiting is a right call too."))}
     <div class="buttons-row">
-      <button data-act="cancel">このまま進む</button>
-      <button class="primary" data-act="turn">引き返す</button>
+      <button data-act="cancel">${tr("このまま進む", "Keep going")}</button>
+      <button class="primary" data-act="turn">${tr("引き返す", "Turn back")}</button>
     </div>`,
   );
   setActions({
@@ -319,10 +331,10 @@ function watchFlight() {
   f.alerts.length = 0;
   const e = f.env;
   const ice = f.condition.propIce > 5;
-  if (e.inCloud && !lastEnv.inCloud) (notes.push("雲に入った！ 何も見えない"), (urgent = true));
-  if (e.rain > 0 && lastEnv.rain === 0) notes.push(`雨の中に入った（強さ ${e.rain}）`);
-  if (e.turbulence > 0 && lastEnv.turbulence === 0) (notes.push(`乱気流（強さ ${e.turbulence}）`), (urgent = true));
-  if (ice && !lastEnv.ice) (notes.push("プロペラに着氷している"), (urgent = true));
+  if (e.inCloud && !lastEnv.inCloud) (notes.push(tr("雲に入った！ 何も見えない", "Into the cloud! You can't see a thing")), (urgent = true));
+  if (e.rain > 0 && lastEnv.rain === 0) notes.push(tr(`雨の中に入った（強さ ${e.rain}）`, `Into the rain (strength ${e.rain})`));
+  if (e.turbulence > 0 && lastEnv.turbulence === 0) (notes.push(tr(`乱気流（強さ ${e.turbulence}）`, `Turbulence (strength ${e.turbulence})`)), (urgent = true));
+  if (ice && !lastEnv.ice) (notes.push(tr("プロペラに着氷している", "Ice is building up on the propeller")), (urgent = true));
   lastEnv = { inCloud: e.inCloud, rain: e.rain, turbulence: e.turbulence, ice };
   if (notes.length) toast(notes);
   if (urgent && speed > 1) setSpeed(1);
@@ -335,7 +347,7 @@ function setSpeed(v: number) {
 
 function setPaused(v: boolean) {
   paused = v;
-  pauseBtn.textContent = paused ? "再開" : "一時停止";
+  pauseBtn.textContent = paused ? tr("再開", "Resume") : tr("一時停止", "Pause");
   pauseBtn.classList.toggle("on", paused);
 }
 pauseBtn.addEventListener("click", () => {
@@ -376,7 +388,7 @@ function tickTutorial(now: number) {
       t.task = null;
       tutView.setTask(null);
       setPaused(false);
-      toast(["チュートリアルの説明をとばした。この旅では、もう止まらない"]);
+      toast([tr("チュートリアルの説明をとばした。この旅では、もう止まらない", "Tutorial explanations skipped. The flight won't stop again on this trip")]);
     },
   });
 }
@@ -463,8 +475,11 @@ function quickStart(w: World) {
   cockpit.setDifficulty("normal");
   cockpit.setFuelCapacity(world.fuelCapacityL);
   departLeg([
-    "整備士のおすすめセッティングで出発。ボルトは整備士が締めておいた（経由地からは自分で締める）",
-    "W / S でスロットル、A / D でミクスチャー。スペースで一時停止",
+    tr(
+      "整備士のおすすめセッティングで出発。ボルトは整備士が締めておいた（経由地からは自分で締める）",
+      "Off with the mechanic's recommended setup. The mechanic tightened the bolts (from the next stop on, you do it yourself)",
+    ),
+    tr("W / S でスロットル、A / D でミクスチャー。スペースで一時停止", "W / S: throttle, A / D: mixture. Space: pause"),
   ]);
 }
 
@@ -509,7 +524,14 @@ function departLeg(extraNotes: string[] = []) {
   running = true;
   setPaused(false);
   lastEnv = { inCloud: false, rain: 0, turbulence: 0, ice: false };
-  toast([`${f.leg.from.name}を離陸。目標高度 ${f.controls.targetAltitude} m まで上昇する`, ...extraNotes, ...notes]);
+  toast([
+    tr(
+      `${f.leg.from.name}を離陸。目標高度 ${f.controls.targetAltitude} m まで上昇する`,
+      `Took off from ${f.leg.from.name}. Climbing to ${f.controls.targetAltitude} m`,
+    ),
+    ...extraNotes,
+    ...notes,
+  ]);
 }
 
 function onFlightEnded() {
@@ -529,9 +551,12 @@ function onFlightEnded() {
     openDialog(
       `<h2 class="ng">${r.title}</h2>
       <p>${r.detail}</p>
-      <p>でも、予備のプロペラを積んでいる。畑の持ち主に手伝ってもらって交換し、もう一度離陸できる（約3時間かかる）。</p>
+      <p>${tr(
+        "でも、予備のプロペラを積んでいる。畑の持ち主に手伝ってもらって交換し、もう一度離陸できる（約3時間かかる）。",
+        "But you carry a spare propeller. With the farmer's help you can swap it and take off again (about 3 hours).",
+      )}</p>
       ${mechanicLine(r.mechanic)}
-      <button class="primary" data-act="recover">予備のプロペラに交換して飛び続ける</button>`,
+      <button class="primary" data-act="recover">${tr("予備のプロペラに交換して飛び続ける", "Fit the spare propeller and fly on")}</button>`,
     );
     setActions({
       recover: () => {
@@ -539,7 +564,7 @@ function onFlightEnded() {
         closeDialog();
         running = true;
         setPaused(false);
-        toast(["予備のプロペラに交換して、畑から離陸した"]);
+        toast([tr("予備のプロペラに交換して、畑から離陸した", "Fitted the spare propeller and took off from the field")]);
       },
     });
     return;
@@ -558,15 +583,15 @@ function showFailure() {
     `<h2 class="ng">${r.title}</h2>
     <p>${r.detail}</p>
     <table>
-      <tr><td>区間</td><td>${f.leg.from.name} → ${f.leg.to.name}</td></tr>
-      <tr><td>飛んだ距離</td><td>${f.distanceFlown.toFixed(0)} / ${f.leg.distanceKm} km</td></tr>
-      <tr><td>飛行時間</td><td>${fmtDuration(f.elapsedMin)}</td></tr>
+      <tr><td>${tr("区間", "Leg")}</td><td>${f.leg.from.name} → ${f.leg.to.name}</td></tr>
+      <tr><td>${tr("飛んだ距離", "Distance flown")}</td><td>${f.distanceFlown.toFixed(0)} / ${f.leg.distanceKm} km</td></tr>
+      <tr><td>${tr("飛行時間", "Flight time")}</td><td>${fmtDuration(f.elapsedMin)}</td></tr>
     </table>
     ${inspectionHtml(f.condition, { details: showDetails, plain: DIFFICULTY[campaign!.difficulty].plainInstruments, haste: f.pilot.haste })}
     ${mechanicLine(r.mechanic)}
     <div class="buttons-row">
-      <button data-act="retry">この区間をやり直す（出発前に戻る）</button>
-      <button class="primary" data-act="restart">格納庫からやり直す</button>
+      <button data-act="retry">${tr("この区間をやり直す（出発前に戻る）", "Retry this leg (back to before departure)")}</button>
+      <button class="primary" data-act="restart">${tr("格納庫からやり直す", "Start over from the hangar")}</button>
     </div>`,
   );
   setActions({
@@ -591,7 +616,7 @@ function showFinal() {
   const dest = field(world, world.goalId);
   // 実際に通った道順（引き返した区間は除く）
   const flown = c.records.filter((r) => !r.returned);
-  const path = [world.startId, ...flown.map((r) => r.leg.to.id)].map((id) => field(world, id).name.replace("飛行場", ""));
+  const path = [world.startId, ...flown.map((r) => r.leg.to.id)].map((id) => field(world, id).name.replace(tr("飛行場", " Field"), ""));
   const ev = evaluateTrip(c);
   const seaFlown = flown.reduce((s, r) => s + seaKm(r.leg), 0);
   // 記録に残す（自己ベスト・実績）
@@ -600,13 +625,14 @@ function showFinal() {
   saveProgress();
   const next = nextStep(world, ev, progress);
   openDialog(
-    `<h2 class="ok">${dest.name}に到着！</h2>
-    <p><b>${world.title}</b>：${path.join(" → ")}、${flown.length}区間・${flown.reduce((s, r) => s + r.leg.distanceKm, 0)} km の旅を終えた。${
-      seaFlown > 0 ? `そのうち海の上は ${seaFlown} km。` : ""
-    }</p>
+    `<h2 class="ok">${tr(`${dest.name}に到着！`, `Arrived at ${dest.name}!`)}</h2>
+    <p><b>${world.title}</b>${tr("：", ": ")}${path.join(" → ")}${tr(
+      `、${flown.length}区間・${flown.reduce((s, r) => s + r.leg.distanceKm, 0)} km の旅を終えた。`,
+      `. You finished a ${flown.reduce((s, r) => s + r.leg.distanceKm, 0)} km trip in ${plural(flown.length, "leg")}. `,
+    )}${seaFlown > 0 ? tr(`そのうち海の上は ${seaFlown} km。`, `${seaFlown} km of it over the sea.`) : ""}</p>
     <div class="rank rank-${ev.rank}">
       <span class="rank-letter">${ev.rank}</span>
-      <span><b>${ev.title}</b><br /><span class="rank-total">${ev.total} 点 / 100</span></span>
+      <span><b>${ev.title}</b><br /><span class="rank-total">${ev.total} ${tr("点", "pts")} / 100</span></span>
     </div>
     <table class="score">
       ${ev.lines
@@ -618,43 +644,53 @@ function showFinal() {
     </table>
     ${
       rec.newBest
-        ? `<p class="new-best">${rec.previousBest ? `自己ベスト更新！（これまでは ${rec.previousBest.rank}・${rec.previousBest.total} 点）` : "このコースをはじめて渡りきった！"}</p>`
-        : `<p class="small">このコースの自己ベストは ${progress.best[world.id].rank}・${progress.best[world.id].total} 点。</p>`
+        ? `<p class="new-best">${
+            rec.previousBest
+              ? tr(
+                  `自己ベスト更新！（これまでは ${rec.previousBest.rank}・${rec.previousBest.total} 点）`,
+                  `New personal best! (before: ${rec.previousBest.rank}, ${rec.previousBest.total} pts)`,
+                )
+              : tr("このコースをはじめて渡りきった！", "Your first time across this course!")
+          }</p>`
+        : `<p class="small">${tr(
+            `このコースの自己ベストは ${progress.best[world.id].rank}・${progress.best[world.id].total} 点。`,
+            `Your best on this course: ${progress.best[world.id].rank}, ${progress.best[world.id].total} pts.`,
+          )}</p>`
     }
     ${mechanicLine(ev.comment)}
     ${
       rec.newAchievements.length
-        ? `<div class="new-achievements"><h3>新しい実績</h3><ul>${rec.newAchievements
+        ? `<div class="new-achievements"><h3>${tr("新しい実績", "New achievements")}</h3><ul>${rec.newAchievements
             .map((a) => `<li><b>${a.title}</b><small>${a.text}</small>${a.reward ? `<span class="reward">${a.reward}</span>` : ""}</li>`)
             .join("")}</ul></div>`
         : ""
     }
 
-    <h3>4つの学び</h3>
+    <h3>${tr("4つの学び", "Four lessons")}</h3>
     <ul class="lessons">${ev.lessons
       .map((l) => `<li class="${l.ok ? "ok" : "ng"}"><b>${l.ok ? "○" : "△"} ${l.title}</b><br />${l.text}</li>`)
       .join("")}</ul>
 
-    <h3>旅の記録</h3>
+    <h3>${tr("旅の記録", "Trip log")}</h3>
     <table>
-      <tr><td>難易度</td><td>${DIFFICULTY[c.difficulty].label}</td></tr>
-      <tr><td>かかった日数</td><td>${c.day}日（${fmtClock(c.clockMin)} 着）</td></tr>
-      <tr><td>飛行時間の合計</td><td>${fmtDuration(totalMin)}</td></tr>
-      <tr><td>操縦者</td><td>疲労 ${Math.round(c.pilot.fatigue)}・焦り ${Math.round(c.pilot.haste)}</td></tr>
+      <tr><td>${tr("難易度", "Difficulty")}</td><td>${DIFFICULTY[c.difficulty].label}</td></tr>
+      <tr><td>${tr("かかった日数", "Days taken")}</td><td>${tr(`${c.day}日（${fmtClock(c.clockMin)} 着）`, `${plural(c.day, "day")} (arrived ${fmtClock(c.clockMin)})`)}</td></tr>
+      <tr><td>${tr("飛行時間の合計", "Total flight time")}</td><td>${fmtDuration(totalMin)}</td></tr>
+      <tr><td>${tr("操縦者", "Pilot")}</td><td>${tr("疲労", "Fatigue")} ${Math.round(c.pilot.fatigue)}${tr("・焦り", " · Haste")} ${Math.round(c.pilot.haste)}</td></tr>
     </table>
-    <h3>着いたときの機体</h3>
+    <h3>${tr("着いたときの機体", "The plane on arrival")}</h3>
     ${inspectionHtml(c.condition, { details: showDetails, plain: DIFFICULTY[c.difficulty].plainInstruments })}
     <ul>${c.events.map((e) => `<li>${e}</li>`).join("")}</ul>
-    ${mechanicLine("おつかれさん。帰ったら、トルク・傷・バランスを点検しておこう。")}
+    ${mechanicLine(tr("おつかれさん。帰ったら、トルク・傷・バランスを点検しておこう。", "Good work. Back home, let's check the torque, the nicks and the balance."))}
     <div class="next-step">
-      <h3>次の旅</h3>
+      <h3>${tr("次の旅", "Next trip")}</h3>
       ${mechanicLine(next.advice)}
       <div class="buttons-row">
-        <button data-act="courses">別のコースを選ぶ</button>
-        <button class="${next.course ? "" : "primary"}" data-act="again">このコースをもう一度</button>
+        <button data-act="courses">${tr("別のコースを選ぶ", "Choose another course")}</button>
+        <button class="${next.course ? "" : "primary"}" data-act="again">${tr("このコースをもう一度", "Fly this course again")}</button>
         ${
           next.course
-            ? `<button class="primary" data-act="next">次は ${courseLabel(next.course)} へ<small>${next.courseReason}</small></button>`
+            ? `<button class="primary" data-act="next">${tr(`次は ${courseLabel(next.course)} へ`, `Next: ${courseLabel(next.course)}`)}<small>${next.courseReason}</small></button>`
             : ""
         }
       </div>

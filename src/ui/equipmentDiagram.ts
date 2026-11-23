@@ -5,6 +5,7 @@ import { EQUIPMENT_MAX_KG, EQUIPMENT_SLOTS } from "../config";
 import { EDGE_GEAR, equipmentKg, ITEMS, slotsUsed } from "../data/equipment";
 import { EDGE_PROTECTION } from "../model/physics";
 import type { EdgeGear, Equipment } from "../model/types";
+import { tr } from "../i18n";
 
 type ItemKey = keyof typeof ITEMS;
 type GearKey = Exclude<EdgeGear, "none"> | ItemKey;
@@ -44,22 +45,25 @@ function loadHtml(e: Equipment): string {
     const k = list[i];
     return k
       ? `<div class="eq-slot c-${k}">${icon(k)}<span>${info(k).name}<small>${info(k).kg} kg</small></span></div>`
-      : `<div class="eq-slot empty"><span>空き</span></div>`;
+      : `<div class="eq-slot empty"><span>${tr("空き", "Empty")}</span></div>`;
   }).join("");
   const segs = list.map((k) => `<i class="c-${k}" style="width:${((100 * info(k).kg) / EQUIPMENT_MAX_KG).toFixed(1)}%" title="${info(k).name}"></i>`).join("");
   return `<div class="eq-load">
-    <div class="fd-head"><b>積み込み</b><span>${list.length} / ${EQUIPMENT_SLOTS} 枠</span></div>
+    <div class="fd-head"><b>${tr("積み込み", "Load")}</b><span>${list.length} / ${EQUIPMENT_SLOTS} ${tr("枠", "slots")}</span></div>
     <div class="eq-slots">${slots}</div>
-    <div class="fd-head eq-kg"><span>重さ</span><span>${kg} / ${EQUIPMENT_MAX_KG} kg</span></div>
+    <div class="fd-head eq-kg"><span>${tr("重さ", "Weight")}</span><span>${kg} / ${EQUIPMENT_MAX_KG} kg</span></div>
     <div class="eq-weight">${segs}</div>
-    <p class="fd-note">積めるのは<b>3つまで</b>、重さは<b>${EQUIPMENT_MAX_KG} kg まで</b>。重いほど離陸距離が伸びる（燃料の量の図）。</p>
+    <p class="fd-note">${tr(
+      `積めるのは<b>3つまで</b>、重さは<b>${EQUIPMENT_MAX_KG} kg まで</b>。重いほど離陸距離が伸びる（燃料の量の図）。`,
+      `You can carry <b>up to 3 items</b>, <b>up to ${EQUIPMENT_MAX_KG} kg</b>. The heavier you are, the longer the takeoff run (see the fuel diagram).`,
+    )}</p>
   </div>`;
 }
 
 /** 選べない理由（枠か重さか） */
 function blocked(trial: Equipment): string {
-  if (slotsUsed(trial) > EQUIPMENT_SLOTS) return "枠が足りない";
-  if (equipmentKg(trial) > EQUIPMENT_MAX_KG) return "重すぎる";
+  if (slotsUsed(trial) > EQUIPMENT_SLOTS) return tr("枠が足りない", "No free slot");
+  if (equipmentKg(trial) > EQUIPMENT_MAX_KG) return tr("重すぎる", "Too heavy");
   return "";
 }
 
@@ -71,8 +75,8 @@ function edgeCard(e: Equipment, k: EdgeGear): string {
   return `<label class="gear eq-card ${why ? "disabled" : ""}">
     <input type="radio" name="edge" data-edge="${k}" ${on ? "checked" : ""} ${why ? "disabled" : ""} />
     ${icon(k)}
-    <span class="eq-body"><b>${g ? g.name : "保護なし"}</b> <small>${g ? `${g.kg} kg` : "0 kg"}</small>
-      <span class="eq-wear"><small>雨での傷み</small><span class="eq-wear-bar"><i style="width:${(wear * 100).toFixed(0)}%"></i></span><small>${wear === 1 ? "そのまま" : `約${Math.round(wear * 100)}%`}</small></span>
+    <span class="eq-body"><b>${g ? g.name : tr("保護なし", "No protection")}</b> <small>${g ? `${g.kg} kg` : "0 kg"}</small>
+      <span class="eq-wear"><small>${tr("雨での傷み", "Rain wear")}</small><span class="eq-wear-bar"><i style="width:${(wear * 100).toFixed(0)}%"></i></span><small>${wear === 1 ? tr("そのまま", "full") : tr(`約${Math.round(wear * 100)}%`, `about ${Math.round(wear * 100)}%`)}</small></span>
       ${why ? `<small class="eq-why">${why}</small>` : ""}</span>
   </label>`;
 }
@@ -93,9 +97,9 @@ export function equipmentDiagramHtml(e: Equipment): string {
   return `<div class="eq-diagram">
     ${loadHtml(e)}
     <div class="eq-groups">
-      <div><p class="eq-group">前縁の保護 <small>どれか1つ・雨の多い旅に</small></p>
+      <div><p class="eq-group">${tr("前縁の保護", "Edge protection")} <small>${tr("どれか1つ・雨の多い旅に", "pick one · for rainy trips")}</small></p>
         <div class="eq-cards">${EDGE_KEYS.map((k) => edgeCard(e, k)).join("")}</div></div>
-      <div><p class="eq-group">持ち物 <small>いくつでも（枠と重さの範囲で）</small></p>
+      <div><p class="eq-group">${tr("持ち物", "Items")} <small>${tr("いくつでも（枠と重さの範囲で）", "any number (within slots and weight)")}</small></p>
         <div class="eq-cards">${ITEM_KEYS.map((k) => itemCard(e, k)).join("")}</div></div>
     </div>
   </div>`;

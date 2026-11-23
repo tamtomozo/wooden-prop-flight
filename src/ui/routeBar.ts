@@ -4,6 +4,7 @@ import { CB_DANGER_KM, MAX_ALTITUDE } from "../config";
 import { destination, distanceLeft, knownState, noReturnKm, terrainAt, type FlightState } from "../game/flight";
 import type { Area, ForecastItem } from "../model/types";
 import { itemArea } from "../model/weather";
+import { tr } from "../i18n";
 
 /** 上の「地図」が帯の高さに占める割合（残りが下の「断面」） */
 const MAP_SHARE = 0.54;
@@ -16,7 +17,10 @@ const COLORS = {
   turbulence: "rgba(232,197,71,",
   cb: "rgba(239,90,90,",
 };
-const KIND_TEXT = { cloud: "雲", rain: "雨", turbulence: "乱気流", cb: "積乱雲" };
+const KIND_TEXT = tr(
+  { cloud: "雲", rain: "雨", turbulence: "乱気流", cb: "積乱雲" },
+  { cloud: "Cloud", rain: "Rain", turbulence: "Turbulence", cb: "Thunderstorm" },
+);
 
 export class RouteBar {
   private ctx: CanvasRenderingContext2D;
@@ -112,7 +116,7 @@ export class RouteBar {
         ctx.fillStyle = "#ef5a5a";
         ctx.font = "bold 10px sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("燃料切れ", xOf(end), cy - 8);
+        ctx.fillText(tr("燃料切れ", "Fuel out"), xOf(end), cy - 8);
       }
     }
 
@@ -129,7 +133,7 @@ export class RouteBar {
       ctx.fillStyle = "#ef5a5a";
       ctx.font = "bold 10px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(s.pastNoReturn ? "限界点（越えた）" : "引き返し限界", x, cy - 13);
+      ctx.fillText(s.pastNoReturn ? tr("限界点（越えた）", "No return (passed)") : tr("引き返し限界", "Point of no return"), x, cy - 13);
     }
 
     // 飛行場
@@ -171,7 +175,7 @@ export class RouteBar {
     ctx.fillStyle = "#8d9096";
     ctx.font = "10px sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("上から", 6, 12);
+    ctx.fillText(tr("上から", "Top view"), 6, 12);
   }
 
   private drawItem(
@@ -278,7 +282,7 @@ export class RouteBar {
       ctx.fillStyle = "#5aa9ef";
       ctx.font = "10px sans-serif";
       ctx.textAlign = "right";
-      ctx.fillText(`凍結 ${s.forecast.freezingLevel}m`, x1 + PAD - 4, fz + 3);
+      ctx.fillText(`${tr("凍結", "Freezing")} ${s.forecast.freezingLevel}m`, x1 + PAD - 4, fz + 3);
     }
 
     // 地形（海の上は青い帯）
@@ -316,7 +320,7 @@ export class RouteBar {
     ctx.fillStyle = "#8d9096";
     ctx.font = "10px sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("横から", 6, bottom);
+    ctx.fillText(tr("横から", "Side view"), 6, bottom);
     ctx.textAlign = "right";
     // 帯が低くて目盛りの文字が重なるときは、2km だけ書く
     const roomy = yOf(1000) - yOf(2000) >= 13;

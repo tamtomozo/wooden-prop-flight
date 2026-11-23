@@ -14,6 +14,7 @@ import {
 import { paramLine } from "../game/mechanicLines";
 import { isHasty, pilotLevel, reactionDelayMin, readingErrorAmp } from "../model/pilot";
 import type { Pilot } from "../model/types";
+import { tr } from "../i18n";
 
 interface Move {
   /** 変化量（負なら下がる） */
@@ -79,7 +80,7 @@ function gaugeHtml(g: GaugeSpec, details: boolean, haste: number): string {
     </div>
     <div class="pl-legend">${legend}</div>
     <ul class="pl-effects">${g.effects.map((e) => `<li>${e}</li>`).join("")}</ul>
-    ${line ? `<p class="pl-line">整備士：${line}</p>` : ""}
+    ${line ? `<p class="pl-line">${tr("整備士：", "Mechanic: ")}${line}</p>` : ""}
   </div>`;
 }
 
@@ -88,41 +89,53 @@ export function pilotDiagramHtml(p: Pilot, details: boolean, haste: number): str
   const err = readingErrorAmp(p.fatigue);
   const fatigue: GaugeSpec = {
     id: "E1",
-    name: "疲労",
+    name: tr("疲労", "Fatigue"),
     value: p.fatigue,
-    words: ["元気", "疲れてきた", "くたくた"],
+    words: tr(["元気", "疲れてきた", "くたくた"], ["Fresh", "Getting tired", "Exhausted"]),
     marks: [
-      { at: PILOT_YELLOW, text: `${PILOT_YELLOW} 操作と計器に影響` },
+      { at: PILOT_YELLOW, text: tr(`${PILOT_YELLOW} 操作と計器に影響`, `${PILOT_YELLOW} affects controls and gauges`) },
     ],
     moves: [
-      { delta: -FATIGUE_REST, label: "一晩泊まる" },
-      { delta: FATIGUE_PER_FLIGHT_HOUR, label: "1時間飛ぶ" },
+      { delta: -FATIGUE_REST, label: tr("一晩泊まる", "Stay one night") },
+      { delta: FATIGUE_PER_FLIGHT_HOUR, label: tr("1時間飛ぶ", "Fly 1 hour") },
     ],
     effects: [
-      `操作の効きの遅れ：${delay > 0 ? `<b>約${delay.toFixed(1)}分</b>` : "なし"}`,
-      `計器の読みのずれ：${err > 0 ? `<b>最大 ±${(err * 100).toFixed(1)}%</b>（本人は気づきにくい）` : "なし"}`,
+      tr(
+          `操作の効きの遅れ：${delay > 0 ? `<b>約${delay.toFixed(1)}分</b>` : "なし"}`,
+          `Control delay: ${delay > 0 ? `<b>about ${delay.toFixed(1)} min</b>` : "none"}`,
+        ),
+      tr(
+          `計器の読みのずれ：${err > 0 ? `<b>最大 ±${(err * 100).toFixed(1)}%</b>（本人は気づきにくい）` : "なし"}`,
+          `Gauge misreading: ${err > 0 ? `<b>up to ±${(err * 100).toFixed(1)}%</b> (hard to notice yourself)` : "none"}`,
+        ),
     ],
   };
   const hasty = isHasty(p.haste);
   const hasteSpec: GaugeSpec = {
     id: "E2",
-    name: "焦り",
+    name: tr("焦り", "Haste"),
     value: p.haste,
-    words: ["落ち着いている", "焦っている", "かなり焦っている"],
-    marks: [{ at: HASTE_OPTIMISTIC, text: `${HASTE_OPTIMISTIC} 判断が甘くなる` }],
+    words: tr(["落ち着いている", "焦っている", "かなり焦っている"], ["Calm", "In a hurry", "Rushing badly"]),
+    marks: [{ at: HASTE_OPTIMISTIC, text: tr(`${HASTE_OPTIMISTIC} 判断が甘くなる`, `${HASTE_OPTIMISTIC} judgment gets sloppy`) }],
     moves: [
-      { delta: -HASTE_RELIEF, label: "天気を待つ・引き返す" },
-      { delta: -HASTE_NIGHT_RELIEF, label: "一晩眠る" },
-      { delta: HASTE_PER_HOUR_BEHIND, label: "日没に間に合わないまま1時間" },
+      { delta: -HASTE_RELIEF, label: tr("天気を待つ・引き返す", "Wait for weather / turn back") },
+      { delta: -HASTE_NIGHT_RELIEF, label: tr("一晩眠る", "Sleep one night") },
+      { delta: HASTE_PER_HOUR_BEHIND, label: tr("日没に間に合わないまま1時間", "1 hour behind for sunset") },
     ],
     effects: [
-      `整備士のひとこと：${hasty ? "<b>「まあ大丈夫だろう」と楽観的に聞こえる</b>" : "ふつうに聞こえる"}`,
-      "日没に余裕があれば、飛んでいるうちに少しずつ落ち着く。",
+      tr(
+          `整備士のひとこと：${hasty ? "<b>「まあ大丈夫だろう」と楽観的に聞こえる</b>" : "ふつうに聞こえる"}`,
+          `The mechanic's advice: ${hasty ? "<b>sounds optimistic, like \"it'll probably be fine\"</b>" : "sounds normal"}`,
+        ),
+      tr("日没に余裕があれば、飛んでいるうちに少しずつ落ち着く。", "With time to spare before sunset, you calm down little by little in flight."),
     ],
   };
   return `<div class="pilot-diagram">
     ${gaugeHtml(fatigue, details, haste)}
     ${gaugeHtml(hasteSpec, details, haste)}
-    <p class="fd-note">物差しの色：緑は ${PILOT_YELLOW} 未満、黄は ${PILOT_YELLOW}〜${PILOT_RED}、赤は ${PILOT_RED} 以上。白い縦線がいまの位置、矢印はその行動でどこまで動くか。</p>
+    <p class="fd-note">${tr(
+      `物差しの色：緑は ${PILOT_YELLOW} 未満、黄は ${PILOT_YELLOW}〜${PILOT_RED}、赤は ${PILOT_RED} 以上。白い縦線がいまの位置、矢印はその行動でどこまで動くか。`,
+      `Scale colors: green below ${PILOT_YELLOW}, yellow ${PILOT_YELLOW}–${PILOT_RED}, red ${PILOT_RED} and up. The white line is where you are now; the arrows show how far each action moves it.`,
+    )}</p>
   </div>`;
 }

@@ -1,6 +1,7 @@
 // 実績を手に入れたときの知らせ。画面のまん中に、1つずつ順に出す。
 // クリック（またはキー）で次へ。さわらなくても数秒で次へ進み、最後は消える。
 import type { Achievement } from "../game/records";
+import { tr } from "../i18n";
 
 /** 1つを出しておく長さ（ミリ秒） */
 const SHOW_MS = 4200;
@@ -36,11 +37,11 @@ export function showAchievementPopups(list: Achievement[], onEach?: (a: Achievem
         <circle cx="30" cy="46" r="22" fill="#f2c94c" stroke="#b8860b" stroke-width="3" />
         <path d="M30 32 L34 41 L44 42 L36.5 48.5 L39 58 L30 53 L21 58 L23.5 48.5 L16 42 L26 41 Z" fill="#fff6cf" />
       </svg>
-      <div class="achv-head">実績を獲得！${list.length > 1 ? `<small>${i} / ${list.length}</small>` : ""}</div>
+      <div class="achv-head">${tr("実績を獲得！", "Achievement unlocked!")}${list.length > 1 ? `<small>${i} / ${list.length}</small>` : ""}</div>
       <b class="achv-title">${a.title}</b>
       <p>${a.text}</p>
       ${a.reward ? `<p class="achv-reward">${a.reward}</p>` : ""}
-      <small class="achv-tap">${i < list.length ? "クリックで次へ" : "クリックで閉じる"}</small>
+      <small class="achv-tap">${i < list.length ? tr("クリックで次へ", "Click for next") : tr("クリックで閉じる", "Click to close")}</small>
     </div>`;
     onEach?.(a);
     timer = window.setTimeout(next, a.reward ? SHOW_MS + 2500 : SHOW_MS);

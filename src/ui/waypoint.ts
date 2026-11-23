@@ -45,6 +45,7 @@ import { legProfileHtml } from "./legProfile";
 import { fmtClock } from "./panel";
 import { routePlanHtml } from "./routePlan";
 import { runTorque } from "./torque";
+import { tr } from "../i18n";
 
 export interface ArrivalInfo {
   result: FlightResult;
@@ -65,14 +66,24 @@ export interface WaypointOptions {
 function tutorialNote(c: CampaignState): string {
   if (!c.world.tutorial) return "";
   return `<details class="tut-note" ${c.records.length <= 1 ? "open" : ""}>
-    <summary><b>チュートリアル：経由地でやること</b></summary>
+    ${tr(
+      `<summary><b>チュートリアル：経由地でやること</b></summary>
     <ol>
       <li><b>機体の点検</b>：ボルト・前縁・振動・エンジンを見る。赤いところがあれば直す。</li>
       <li><b>整備と準備</b>：ボルトは飛ぶたびにゆるむ。<b>締め直す</b>。疲れていたら<b>休む</b>（泊まる）。</li>
       <li><b>給油</b>：次の区間に要る燃料＋予備。積みすぎると重くて、短い滑走路から飛び立てない。</li>
       <li><b>次の行き先</b>と<b>次の区間</b>：地図で行き先を選び、予報（雲・雨・風）と断面図（山・海）を見る。</li>
       <li>霧や悪い天気なら<b>待つ</b>のも正しい判断。準備ができたら出発する。</li>
-    </ol>
+    </ol>`,
+      `<summary><b>Tutorial: what to do at a stop</b></summary>
+    <ol>
+      <li><b>Inspect the plane</b>: look at the bolts, leading edge, vibration and engine. Fix anything that is red.</li>
+      <li><b>Repairs and prep</b>: the bolts loosen with every flight. <b>Re-tighten</b> them. If you are tired, <b>rest</b> (stay the night).</li>
+      <li><b>Refuel</b>: the fuel for the next leg plus the reserve. Load too much and you are too heavy to take off from a short runway.</li>
+      <li><b>Next stop</b> and <b>next leg</b>: choose the destination on the map, then check the forecast (cloud, rain, wind) and the profile (mountains, sea).</li>
+      <li>In fog or bad weather, <b>waiting</b> is a right call too. When you are ready, take off.</li>
+    </ol>`,
+    )}
   </details>`;
 }
 
@@ -103,20 +114,26 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
     const notice = boltCheckNotice(c);
     const btn = (act: string, label: string, info: ActionInfo, extra = "") =>
       `<button data-act="${act}" class="${act === "retorque" && notice ? "attention" : ""}" ${info.ok ? "" : "disabled"}>
-        <b>${label}</b><small>${info.min ? fmtDuration(info.min) : ""}${info.reason ? `（${info.reason}）` : ""}${extra}</small>
+        <b>${label}</b><small>${info.min ? fmtDuration(info.min) : ""}${info.reason ? tr(`（${info.reason}）`, ` (${info.reason})`) : ""}${extra}</small>
       </button>`;
 
 
     openDialog(
-      `<h2>${arrival ? `${here.name}に着陸` : `${here.name}`}</h2>
-      <p class="lead">${c.day}日目 ${fmtClock(c.clockMin)}・日没まで ${toSunset > 0 ? fmtDuration(toSunset) : "—（もう暗い）"}</p>
-      <p class="small">${here.description}　湿度 ${here.humidity}%・整備場 ${here.hasRepairShop ? "あり" : "なし"}</p>
+      `<h2>${arrival ? tr(`${here.name}に着陸`, `Landed at ${here.name}`) : `${here.name}`}</h2>
+      <p class="lead">${tr(
+        `${c.day}日目 ${fmtClock(c.clockMin)}・日没まで ${toSunset > 0 ? fmtDuration(toSunset) : "—（もう暗い）"}`,
+        `Day ${c.day}, ${fmtClock(c.clockMin)} · ${toSunset > 0 ? `${fmtDuration(toSunset)} to sunset` : "— (already dark)"}`,
+      )}</p>
+      <p class="small">${here.description}${tr(
+        `　湿度 ${here.humidity}%・整備場 ${here.hasRepairShop ? "あり" : "なし"}`,
+        `  Humidity ${here.humidity}% · ${here.hasRepairShop ? "repair shop" : "no repair shop"}`,
+      )}</p>
       ${fogMeter(here.name, spreadAt(here, c.clockMin), foggedNow(c))}
 
       ${
         arrival
           ? `<div class="arrival ${arrival.result.success ? "ok" : ""}">
-              <b>${arrival.result.title}</b>　飛行 ${fmtDuration(arrival.flightMin)}・燃料 ${arrival.fuelUsed.toFixed(1)} L
+              <b>${arrival.result.title}</b>${tr("　飛行", "  Flight")} ${fmtDuration(arrival.flightMin)}${tr("・燃料", " · fuel")} ${arrival.fuelUsed.toFixed(1)} L
               <ul>${c.events.map((e) => `<li>${e}</li>`).join("")}</ul>
             </div>`
           : ""
@@ -124,24 +141,27 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
 
       ${mechanicLine(adviceAtField(c))}
       ${tutorialNote(c)}
-      ${leg ? rumorsHtml(rumorsFor(leg, c.weatherSeed + c.day), `${leg.to.name}への道`) : ""}
+      ${leg ? rumorsHtml(rumorsFor(leg, c.weatherSeed + c.day), tr(`${leg.to.name}への道`, `the way to ${leg.to.name}`)) : ""}
 
       ${tabsHtml<WaypointTab>(
         [
-          { id: "check", label: "機体の点検", sub: notice ? "通知あり" : undefined, todo: !!notice },
-          { id: "pilot", label: "操縦者" },
-          { id: "work", label: "整備と準備" },
-          { id: "fuel", label: "給油", sub: `${a.fuelRemaining.toFixed(0)} L` },
-          { id: "dest", label: "次の行き先", sub: leg ? leg.to.name : "まだ", todo: !leg },
-          { id: "leg", label: "次の区間", sub: leg ? "予報" : undefined },
+          { id: "check", label: tr("機体の点検", "Inspection"), sub: notice ? tr("通知あり", "Notice") : undefined, todo: !!notice },
+          { id: "pilot", label: tr("操縦者", "Pilot") },
+          { id: "work", label: tr("整備と準備", "Repairs & prep") },
+          { id: "fuel", label: tr("給油", "Refuel"), sub: `${a.fuelRemaining.toFixed(0)} L` },
+          { id: "dest", label: tr("次の行き先", "Next stop"), sub: leg ? leg.to.name : tr("まだ", "Not yet"), todo: !leg },
+          { id: "leg", label: tr("次の区間", "Next leg"), sub: leg ? tr("予報", "Forecast") : undefined },
         ],
         tab,
       )}
       <section class="tab-panel" role="tabpanel">${panelHtml()}</section>
 
-      <p class="small">今の重さ ${Math.round(tc.weight)} kg・気温 ${tc.temperature.toFixed(0)}℃・離陸距離 ${Math.round(tc.distance)} m / 滑走路 ${tc.runway} m ${tc.ok ? "○" : "×（燃料を減らすか、涼しい時間を待つ）"}</p>
-      ${problems.length ? `<p class="problems">${problems.join("・")}</p>` : ""}
-      <button class="primary" data-act="depart" ${problems.length ? "disabled" : ""}>${leg ? `${leg.to.name}へ出発する` : "行き先を選ぶ"}</button>`,
+      <p class="small">${tr(
+        `今の重さ ${Math.round(tc.weight)} kg・気温 ${tc.temperature.toFixed(0)}℃・離陸距離 ${Math.round(tc.distance)} m / 滑走路 ${tc.runway} m ${tc.ok ? "○" : "×（燃料を減らすか、涼しい時間を待つ）"}`,
+        `Weight now ${Math.round(tc.weight)} kg · ${tc.temperature.toFixed(0)}°C · takeoff run ${Math.round(tc.distance)} m / runway ${tc.runway} m ${tc.ok ? "○" : "× (carry less fuel, or wait for a cooler hour)"}`,
+      )}</p>
+      ${problems.length ? `<p class="problems">${problems.join(tr("・", " · "))}</p>` : ""}
+      <button class="primary" data-act="depart" ${problems.length ? "disabled" : ""}>${leg ? tr(`${leg.to.name}へ出発する`, `Take off for ${leg.to.name}`) : tr("行き先を選ぶ", "Choose a destination")}</button>`,
       { wide: true, keepScroll },
     );
 
@@ -159,35 +179,43 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
 
     /** 選んでいるタブの中身 */
     function panelHtml(): string {
-      const detailsToggle = `<p class="tab-tools"><label class="toggle small"><input type="checkbox" data-details ${d ? "checked" : ""} /> 数値</label></p>`;
+      const detailsToggle = `<p class="tab-tools"><label class="toggle small"><input type="checkbox" data-details ${d ? "checked" : ""} /> ${tr("数値", "Numbers")}</label></p>`;
       switch (tab) {
         case "check":
           return `${detailsToggle}
-          ${notice ? `<div class="notice">点検の通知：${notice}</div>` : ""}
+          ${notice ? `<div class="notice">${tr("点検の通知：", "Inspection notice: ")}${notice}</div>` : ""}
           ${inspectionHtml(a, { details: d, plain, haste: c.pilot.haste })}`;
         case "pilot":
           return `${detailsToggle}
           ${plain ? pilotTable(c.pilot, d, { plain, haste: c.pilot.haste }) : pilotDiagramHtml(c.pilot, d, c.pilot.haste)}`;
         case "work":
           return `<div class="actions">
-            ${btn("retorque", "ボルトを締め直す", retorqueInfo(c), c.setup.equipment.toolKit ? "・工具セット" : "")}
-            ${btn("edge", "前縁を補修する", edgeRepairInfo(c))}
-            ${btn("engine", "エンジンを整備する", engineServiceInfo(c))}
-            ${btn("frame", "機体を修理する", airframeRepairInfo(c))}
-            ${btn("swap", "予備のプロペラに交換", propSwapInfo(c))}
-            ${btn("wait", "天気を待つ", waitInfo(c), `・焦り −${HASTE_RELIEF}（勇気ある撤退）・霧が晴れる／午後は天気が変わる`)}
-            ${btn("rest", "一晩泊まる（翌朝 8:00）", restInfo(c), `翌朝まで休む・疲労 −${FATIGUE_REST}`)}
+            ${btn("retorque", tr("ボルトを締め直す", "Re-tighten the bolts"), retorqueInfo(c), c.setup.equipment.toolKit ? tr("・工具セット", " · tool kit") : "")}
+            ${btn("edge", tr("前縁を補修する", "Repair the leading edge"), edgeRepairInfo(c))}
+            ${btn("engine", tr("エンジンを整備する", "Service the engine"), engineServiceInfo(c))}
+            ${btn("frame", tr("機体を修理する", "Repair the airframe"), airframeRepairInfo(c))}
+            ${btn("swap", tr("予備のプロペラに交換", "Fit the spare propeller"), propSwapInfo(c))}
+            ${btn(
+              "wait",
+              tr("天気を待つ", "Wait for weather"),
+              waitInfo(c),
+              tr(
+                `・焦り −${HASTE_RELIEF}（勇気ある撤退）・霧が晴れる／午後は天気が変わる`,
+                ` · haste −${HASTE_RELIEF} (brave retreat) · fog clears / afternoon weather changes`,
+              ),
+            )}
+            ${btn("rest", tr("一晩泊まる（翌朝 8:00）", "Stay the night (until 8:00)"), restInfo(c), tr(`翌朝まで休む・疲労 −${FATIGUE_REST}`, `Rest until morning · fatigue −${FATIGUE_REST}`))}
           </div>`;
         case "fuel":
           return `<div class="fuel-row">
             <input type="range" min="0" max="${c.world.fuelCapacityL}" step="1" value="${fuelTarget}" data-fuel />
-            <span>今 ${a.fuelRemaining.toFixed(0)} L → <b>${fuelTarget} L</b>
-              ${fuelTarget < a.fuelRemaining - 0.5 ? "（抜く）" : ""}
-              ・離陸距離 <b class="${tcTarget.ok ? "" : "ng-text"}">${Math.round(tcTarget.distance)} m</b> / ${tcTarget.runway} m</span>
-            <button data-act="fuel" ${fuelInfo.ok ? "" : "disabled"}>この量にする</button>
+            <span>${tr("今", "Now")} ${a.fuelRemaining.toFixed(0)} L → <b>${fuelTarget} L</b>
+              ${fuelTarget < a.fuelRemaining - 0.5 ? tr("（抜く）", "(drain)") : ""}
+              ${tr("・離陸距離", "· takeoff run")} <b class="${tcTarget.ok ? "" : "ng-text"}">${Math.round(tcTarget.distance)} m</b> / ${tcTarget.runway} m</span>
+            <button data-act="fuel" ${fuelInfo.ok ? "" : "disabled"}>${tr("この量にする", "Set this amount")}</button>
           </div>`;
         case "dest":
-          return `<p class="small">地図の飛行場をクリックして選ぶ</p>
+          return `<p class="small">${tr("地図の飛行場をクリックして選ぶ", "Click a field on the map to choose")}</p>
           ${routePlanHtml(c.world, {
             from: c.location,
             destination: c.destination,
@@ -197,7 +225,7 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
             equipmentKg: equipmentKg(c.setup.equipment),
           })}`;
         case "leg":
-          return nextLegHtml(c) || `<p class="small">「次の行き先」で飛行場を選ぶと、区間の断面図と予報が出る。</p>`;
+          return nextLegHtml(c) || `<p class="small">${tr("「次の行き先」で飛行場を選ぶと、区間の断面図と予報が出る。", "Choose a field under \"Next stop\" to see the leg's profile and forecast.")}</p>`;
       }
     }
   }
@@ -205,7 +233,7 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
   const torqueThen = (heading: string, apply: (r: Parameters<typeof retorque>[1]) => void) =>
     runTorque({
       heading,
-      note: "トルクレンチでボルト3本を締める。",
+      note: tr("トルクレンチでボルト3本を締める。", "Tighten the three bolts with the torque wrench."),
       onDone: (r) => {
         apply(r);
         render(false);
@@ -217,8 +245,8 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
       tab = el.dataset.v as WaypointTab;
       render();
     },
-    retorque: () => torqueThen("ボルトの締め直し", (r) => retorque(c, r)),
-    swap: () => torqueThen("予備のプロペラに交換", (r) => swapProp(c, r)),
+    retorque: () => torqueThen(tr("ボルトの締め直し", "Re-tightening the bolts"), (r) => retorque(c, r)),
+    swap: () => torqueThen(tr("予備のプロペラに交換", "Fitting the spare propeller"), (r) => swapProp(c, r)),
     edge: () => {
       repairEdge(c);
       render();
@@ -266,41 +294,61 @@ function adviceAtField(c: CampaignState): string {
   return real;
 }
 
-const CALM = "異常なし。燃料と時間を計算して、無理のない計画で出よう。";
-const HASTY_FIELD = [
-  "点検？ 急いでるんだ。まあ大丈夫だろう、出よう。",
-  "細かいことは着いてから見ればいい。遅れを取り戻そう。",
-  "多少のことは気にするな。今出れば、まだ間に合う。",
-];
+const CALM = tr("異常なし。燃料と時間を計算して、無理のない計画で出よう。", "All good. Work out your fuel and time, and leave with a plan that isn't a stretch.");
+const HASTY_FIELD = tr(
+  [
+    "点検？ 急いでるんだ。まあ大丈夫だろう、出よう。",
+    "細かいことは着いてから見ればいい。遅れを取り戻そう。",
+    "多少のことは気にするな。今出れば、まだ間に合う。",
+  ],
+  [
+    "Inspection? We're in a hurry. It'll probably be fine, let's go.",
+    "We can look at the details when we get there. Let's make up lost time.",
+    "Don't worry about the little things. If we leave now, we can still make it.",
+  ],
+);
 
 function realAdviceAtField(c: CampaignState): string {
   const a = c.condition;
-  const humidityEvent = c.events.find((e) => e.startsWith("湿度") && e.includes("ゆるんだ"));
-  if (foggedNow(c)) return "霧で滑走路が見えない。晴れるまで待て。朝の霧は、日が高くなれば消える。";
-  if (a.airframe < 60) return "機体が揺れで傷んでる。整備場で直しておけ。";
-  if (a.propDurability <= 30) return "プロペラがかなり弱ってる。予備があれば交換しろ。";
-  if (a.boltTightness < BOLT_DANGER + 10) return "ボルトが危ないところまでゆるんでる。締め直さずに飛ぶのは自殺行為だ。";
-  if (humidityEvent && a.boltTightness < 80) return "気候の違う土地に着いたら、まず締め直せ。";
-  if (a.vibration >= VIBRATION_YELLOW) return "振動が出てる。原因はボルトのゆるみか、前縁の傷の左右差だ。";
-  if (a.propEdge < 85) return "前縁に傷がある。放っておくと効率が落ちて、そのうち振動の元になる。";
-  if (a.engineHealth < 70) return "エンジンが疲れてる。整備場があるうちに見ておくと安心だ。";
-  if (c.pilot.fatigue >= PILOT_RED) return "くたくたじゃないか。疲れると操作も計器の読みも遅れる。今日はもう休め。";
-  if (rushedToday(c)) return "今から出ると、暗くなる前に着けるかぎりぎりだ。焦るな。泊まって朝に出るのも正しい判断だ。";
+  const humidityEvent = c.events.find((e) => e.startsWith(tr("湿度", "Humidity")) && e.includes(tr("ゆるんだ", "loosened")));
+  if (foggedNow(c)) return tr("霧で滑走路が見えない。晴れるまで待て。朝の霧は、日が高くなれば消える。", "Fog hides the runway. Wait until it clears. Morning fog burns off once the sun is high.");
+  if (a.airframe < 60) return tr("機体が揺れで傷んでる。整備場で直しておけ。", "The airframe is worn from the shaking. Get it fixed at a repair shop.");
+  if (a.propDurability <= 30) return tr("プロペラがかなり弱ってる。予備があれば交換しろ。", "The propeller is quite weak. If you have a spare, fit it.");
+  if (a.boltTightness < BOLT_DANGER + 10) return tr("ボルトが危ないところまでゆるんでる。締め直さずに飛ぶのは自殺行為だ。", "The bolts are dangerously loose. Flying without re-tightening them is suicide.");
+  if (humidityEvent && a.boltTightness < 80) return tr("気候の違う土地に着いたら、まず締め直せ。", "When you land somewhere with a different climate, re-tighten first.");
+  if (a.vibration >= VIBRATION_YELLOW) return tr("振動が出てる。原因はボルトのゆるみか、前縁の傷の左右差だ。", "There's vibration. Either the bolts are loose or the two blades' edges are nicked unevenly.");
+  if (a.propEdge < 85) return tr("前縁に傷がある。放っておくと効率が落ちて、そのうち振動の元になる。", "The leading edge is nicked. Leave it and efficiency drops, and sooner or later it causes vibration.");
+  if (a.engineHealth < 70) return tr("エンジンが疲れてる。整備場があるうちに見ておくと安心だ。", "The engine is tired. Better have it looked at while there's a repair shop.");
+  if (c.pilot.fatigue >= PILOT_RED) return tr("くたくたじゃないか。疲れると操作も計器の読みも遅れる。今日はもう休め。", "You're worn out. Tired pilots are slow on the controls and the gauges. Call it a day.");
+  if (rushedToday(c)) return tr("今から出ると、暗くなる前に着けるかぎりぎりだ。焦るな。泊まって朝に出るのも正しい判断だ。", "Leave now and it's touch and go whether you land before dark. Don't rush. Staying the night and leaving in the morning is a right call too.");
   return CALM;
 }
 
-const KIND_TEXT = { cloud: "雲", rain: "雨", turbulence: "乱気流", cb: "積乱雲" } as const;
+const KIND_TEXT = tr(
+  { cloud: "雲", rain: "雨", turbulence: "乱気流", cb: "積乱雲" },
+  { cloud: "Cloud", rain: "Rain", turbulence: "Turbulence", cb: "Thunderstorm" },
+);
 
 function itemText(i: ForecastItem): { where: string; what: string } {
-  const side = (lat: number) => (Math.abs(lat) < 3 ? "コース上" : `コースの${lat < 0 ? "左" : "右"} ${Math.abs(Math.round(lat))} km`);
-  if (i.cb) return { where: `${i.cb.alongKm} km 付近・${side(i.cb.lateralKm)}`, what: `積乱雲（${CB_DANGER_KM} km 以上離れること）` };
+  const side = (lat: number) =>
+    Math.abs(lat) < 3
+      ? tr("コース上", "on course")
+      : tr(`コースの${lat < 0 ? "左" : "右"} ${Math.abs(Math.round(lat))} km`, `${Math.abs(Math.round(lat))} km ${lat < 0 ? "left" : "right"} of course`);
+  if (i.cb)
+    return {
+      where: tr(`${i.cb.alongKm} km 付近・${side(i.cb.lateralKm)}`, `around ${i.cb.alongKm} km · ${side(i.cb.lateralKm)}`),
+      what: tr(`積乱雲（${CB_DANGER_KM} km 以上離れること）`, `Thunderstorm (keep at least ${CB_DANGER_KM} km away)`),
+    };
   const a = (i.rain ?? i.cloud ?? i.turbulence)!;
-  const where = `${a.fromKm}〜${a.toKm} km・${side(a.lateralKm)}・幅 ${a.halfWidthKm * 2} km`;
+  const where = tr(
+    `${a.fromKm}〜${a.toKm} km・${side(a.lateralKm)}・幅 ${a.halfWidthKm * 2} km`,
+    `${a.fromKm}–${a.toKm} km · ${side(a.lateralKm)} · ${a.halfWidthKm * 2} km wide`,
+  );
   const parts: string[] = [];
-  if (i.rain) parts.push(`雨（強さ ${i.rain.intensity}）`);
-  if (i.cloud) parts.push(`雲 ${i.cloud.base}〜${i.cloud.top} m`);
-  if (i.turbulence) parts.push(`乱気流（強さ ${i.turbulence.intensity}）`);
-  return { where, what: parts.join("・") || KIND_TEXT[i.kind] };
+  if (i.rain) parts.push(tr(`雨（強さ ${i.rain.intensity}）`, `Rain (strength ${i.rain.intensity})`));
+  if (i.cloud) parts.push(tr(`雲 ${i.cloud.base}〜${i.cloud.top} m`, `Cloud ${i.cloud.base}–${i.cloud.top} m`));
+  if (i.turbulence) parts.push(tr(`乱気流（強さ ${i.turbulence.intensity}）`, `Turbulence (strength ${i.turbulence.intensity})`));
+  return { where, what: parts.join(tr("・", " · ")) || KIND_TEXT[i.kind] };
 }
 
 /** 予報（確率つき）と高度別の風 */
@@ -328,10 +376,20 @@ export function nextLegHtml(c: CampaignState, heading = (from: string, to: strin
         destSpread,
       })}
       <details class="howto">
-        <summary>予報と区間の数字（文字で見る）</summary>
+        <summary>${tr("予報と区間の数字（文字で見る）", "Forecast and leg numbers (as text)")}</summary>
         ${forecastHtml(wx.forecast, leg.distanceKm, leg.from.elevation)}
-        <p class="small">${leg.distanceKm} km・地上の風 ${leg.headwindKmh >= 0 ? `向かい風 ${leg.headwindKmh}` : `追い風 ${-leg.headwindKmh}`} km/h・すすめの巡航高度 ${leg.cruiseAltitude} m・着く先は ${leg.to.surface === "paved" ? "舗装" : "未舗装"}（湿度 ${leg.to.humidity}%）</p>
-        ${est ? `<p class="small">目安（出力${PLAN_THROTTLE * 100}%・最良燃費）：約 ${fmtDuration(est.minutes)}・燃料 約 ${est.fuelL.toFixed(0)} L ＋ 予備 → 到着 ${etaMin < 24 * 60 ? fmtClock(etaMin) : "—"}</p>` : ""}
+        <p class="small">${tr(
+          `${leg.distanceKm} km・地上の風 ${leg.headwindKmh >= 0 ? `向かい風 ${leg.headwindKmh}` : `追い風 ${-leg.headwindKmh}`} km/h・すすめの巡航高度 ${leg.cruiseAltitude} m・着く先は ${leg.to.surface === "paved" ? "舗装" : "未舗装"}（湿度 ${leg.to.humidity}%）`,
+          `${leg.distanceKm} km · surface wind ${leg.headwindKmh >= 0 ? `headwind ${leg.headwindKmh}` : `tailwind ${-leg.headwindKmh}`} km/h · suggested cruise altitude ${leg.cruiseAltitude} m · destination is ${leg.to.surface === "paved" ? "paved" : "unpaved"} (humidity ${leg.to.humidity}%)`,
+        )}</p>
+        ${
+          est
+            ? `<p class="small">${tr(
+                `目安（出力${PLAN_THROTTLE * 100}%・最良燃費）：約 ${fmtDuration(est.minutes)}・燃料 約 ${est.fuelL.toFixed(0)} L ＋ 予備 → 到着 ${etaMin < 24 * 60 ? fmtClock(etaMin) : "—"}`,
+                `Estimate (${PLAN_THROTTLE * 100}% power, best economy): about ${fmtDuration(est.minutes)} · fuel about ${est.fuelL.toFixed(0)} L + reserve → arrive ${etaMin < 24 * 60 ? fmtClock(etaMin) : "—"}`,
+              )}</p>`
+            : ""
+        }
       </details>`;
 }
 
@@ -348,14 +406,21 @@ function forecastHtml(f: Forecast, distanceKm: number, fieldElevation: number) {
     .sort((a, b) => a.altitude - b.altitude)
     .map((wl) => {
       const hw = Math.round(headwindAt(f.winds, Math.max(wl.altitude, fieldElevation)));
-      return `<span class="wind">${wl.altitude === 0 ? "地上" : `${wl.altitude} m`}：${hw >= 0 ? `向かい ${hw}` : `追い ${-hw}`}</span>`;
+      return `<span class="wind">${wl.altitude === 0 ? tr("地上", "Surface") : `${wl.altitude} m`}${tr("：", ": ")}${hw >= 0 ? tr(`向かい ${hw}`, `head ${hw}`) : tr(`追い ${-hw}`, `tail ${-hw}`)}</span>`;
     })
     .join("");
   return `<div class="forecast">
-    <p class="small">天気予報（${f.period === "morning" ? "午前" : "午後"}の出発）。確率は「その天気になる見込み」。位置や高さは、実際とずれることがある。</p>
-    ${rows ? `<table class="route-table"><tr><th>場所（出発地から）</th><th>予報</th><th>確率</th></tr>${rows}</table>` : "<p>この区間に目立った天気の予報はない。</p>"}
-    <p class="winds"><b>高度別の風</b> ${winds}<span class="wind">凍結高度 ${f.freezingLevel} m</span></p>
-    <p class="small">区間の長さ ${distanceKm} km</p>
+    <p class="small">${tr(
+      `天気予報（${f.period === "morning" ? "午前" : "午後"}の出発）。確率は「その天気になる見込み」。位置や高さは、実際とずれることがある。`,
+      `Forecast (for a ${f.period === "morning" ? "morning" : "afternoon"} departure). The percentage is the chance of that weather. Places and heights may be off.`,
+    )}</p>
+    ${
+      rows
+        ? `<table class="route-table"><tr><th>${tr("場所（出発地から）", "Where (from departure)")}</th><th>${tr("予報", "Forecast")}</th><th>${tr("確率", "Chance")}</th></tr>${rows}</table>`
+        : `<p>${tr("この区間に目立った天気の予報はない。", "No notable weather is forecast for this leg.")}</p>`
+    }
+    <p class="winds"><b>${tr("高度別の風", "Wind by altitude")}</b> ${winds}<span class="wind">${tr("凍結高度", "Freezing level")} ${f.freezingLevel} m</span></p>
+    <p class="small">${tr("区間の長さ", "Leg length")} ${distanceKm} km</p>
   </div>`;
 }
 
@@ -365,8 +430,8 @@ function fogMeter(name: string, spread: number, fogged: boolean) {
   const level = fogged ? "red" : chance > 0 ? "yellow" : "green";
   const fill = Math.max(0, Math.min(1, 1 - spread / 8));
   return `<div class="fogmeter ${level}">
-    <span>霧の出やすさ（${name}）</span>
+    <span>${tr(`霧の出やすさ（${name}）`, `Fog chance (${name})`)}</span>
     <span class="st-bar"><i style="width:${fill * 100}%"></i></span>
-    <span>${fogged ? "霧が出ている" : chance > 0 ? `出やすい（${Math.round(chance * 100)}%）` : "出にくい"}　<small>気温と露点の差 ${spread.toFixed(1)}℃</small></span>
+    <span>${fogged ? tr("霧が出ている", "Foggy now") : chance > 0 ? tr(`出やすい（${Math.round(chance * 100)}%）`, `Likely (${Math.round(chance * 100)}%)`) : tr("出にくい", "Unlikely")}  <small>${tr("気温と露点の差", "Temp–dew point spread")} ${spread.toFixed(1)}${tr("℃", "°C")}</small></span>
   </div>`;
 }

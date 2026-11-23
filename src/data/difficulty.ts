@@ -1,5 +1,6 @@
 // 7章「難易度」。
 import type { Difficulty } from "../model/types";
+import { tr } from "../i18n";
 
 export interface DifficultyRule {
   label: string;
@@ -18,8 +19,8 @@ export interface DifficultyRule {
 
 export const DIFFICULTY: Record<Difficulty, DifficultyRule> = {
   easy: {
-    label: "かんたん",
-    description: "混合比とキャブヒートは自動。ボルト点検を知らせてくれる。操作するのは出力・高度・ルート。",
+    label: tr("かんたん", "Easy"),
+    description: tr("混合比とキャブヒートは自動。ボルト点検を知らせてくれる。操作するのは出力・高度・ルート。", "Mixture and carb heat are automatic. You are told when to check the bolts. You handle power, altitude and route."),
     autoMixture: true,
     autoCarbHeat: true,
     boltNotice: true,
@@ -28,8 +29,8 @@ export const DIFFICULTY: Record<Difficulty, DifficultyRule> = {
     forecastUncertainty: 0.6,
   },
   normal: {
-    label: "ふつう",
-    description: "ボルト点検の通知だけ自動。ほぼすべてを自分で操作する。",
+    label: tr("ふつう", "Normal"),
+    description: tr("ボルト点検の通知だけ自動。ほぼすべてを自分で操作する。", "Only the bolt-check notice is automatic. You do almost everything yourself."),
     autoMixture: false,
     autoCarbHeat: false,
     boltNotice: true,
@@ -38,8 +39,8 @@ export const DIFFICULTY: Record<Difficulty, DifficultyRule> = {
     forecastUncertainty: 1,
   },
   real: {
-    label: "リアル",
-    description: "自動なし。計器は数値だけで、色の目安は出ない。予報の外れも大きい。",
+    label: tr("リアル", "Real"),
+    description: tr("自動なし。計器は数値だけで、色の目安は出ない。予報の外れも大きい。", "Nothing automatic. The gauges show numbers only, with no color guides. Forecasts miss by more."),
     autoMixture: false,
     autoCarbHeat: false,
     boltNotice: false,

@@ -3,6 +3,7 @@
 // 右：巡航速度・上昇力・離陸距離・地上回転数を、選んだピッチで棒グラフに。
 import { pitchFactors, staticRpmVerdict } from "../model/physics";
 import type { PitchLevel } from "../model/types";
+import { tr } from "../i18n";
 
 const LEVELS: PitchLevel[] = [1, 2, 3, 4, 5];
 /** 図に描く羽根の角度（見やすさ優先の誇張した値） */
@@ -35,7 +36,7 @@ function triangleSvg(pitch: PitchLevel): string {
   const arc = `<path class="pd-arc" d="M${X0 + r},${BASE_Y} A${r},${r} 0 0 0 ${(X0 + r * Math.cos(rad)).toFixed(1)},${(BASE_Y - r * Math.sin(rad)).toFixed(1)}" />`;
 
   const ax = X1 + 12;
-  return `<svg class="pd-svg" viewBox="0 46 300 130" role="img" aria-label="羽根の角度と1回転で進む距離の図">
+  return `<svg class="pd-svg" viewBox="0 46 300 130" role="img" aria-label="${tr("羽根の角度と1回転で進む距離の図", "Blade angle and distance moved per turn")}">
     <defs>
       <marker id="pd-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
         <path d="M0,0 L10,5 L0,10 Z" class="pd-head" />
@@ -46,14 +47,14 @@ function triangleSvg(pitch: PitchLevel): string {
     <line class="pd-now" x1="${X0}" y1="${BASE_Y}" x2="${X1}" y2="${top.toFixed(1)}" />
     <line class="pd-drop" x1="${X1}" y1="${BASE_Y}" x2="${X1}" y2="${top.toFixed(1)}" />
     ${arc}
-    <text class="pd-t" x="${X0 + r + 6}" y="${BASE_Y - 5}">角度</text>
+    <text class="pd-t" x="${X0 + r + 6}" y="${BASE_Y - 5}">${tr("角度", "angle")}</text>
     ${blade}
     <line class="pd-adv" x1="${ax}" y1="${BASE_Y}" x2="${ax}" y2="${(top + 1).toFixed(1)}" marker-end="url(#pd-head)" />
-    <text class="pd-t pd-strong" x="${ax + 8}" y="${((BASE_Y + top) / 2 - 2).toFixed(1)}">1回転で</text>
-    <text class="pd-t pd-strong" x="${ax + 8}" y="${((BASE_Y + top) / 2 + 13).toFixed(1)}">進む距離</text>
+    <text class="pd-t pd-strong" x="${ax + 8}" y="${((BASE_Y + top) / 2 - 2).toFixed(1)}">${tr("1回転で", "distance")}</text>
+    <text class="pd-t pd-strong" x="${ax + 8}" y="${((BASE_Y + top) / 2 + 13).toFixed(1)}">${tr("進む距離", "per turn")}</text>
     <line class="pd-rot" x1="${X0}" y1="${BASE_Y + 14}" x2="${X1}" y2="${BASE_Y + 14}" marker-end="url(#pd-head)" />
-    <text class="pd-t" x="${(X0 + X1) / 2}" y="${BASE_Y + 28}" text-anchor="middle">回る向き（羽根の先が1回転でえがく円周）</text>
-    <text class="pd-t pd-dim" x="${X0}" y="58">点線：ほかのピッチ</text>
+    <text class="pd-t" x="${(X0 + X1) / 2}" y="${BASE_Y + 28}" text-anchor="middle">${tr("回る向き（羽根の先が1回転でえがく円周）", "direction of turn (path of the blade tip)")}</text>
+    <text class="pd-t pd-dim" x="${X0}" y="58">${tr("点線：ほかのピッチ", "dotted: other pitches")}</text>
   </svg>`;
 }
 
@@ -74,13 +75,16 @@ function barRow(label: string, hint: string, values: number[], v: number, better
 
 const RPM_LO = 2150;
 const RPM_HI = 2450;
-const VERDICT = { low: "低い（上昇が弱い）", ok: "適正", high: "高い（回りすぎ注意）" } as const;
+const VERDICT = tr(
+  { low: "低い（上昇が弱い）", ok: "適正", high: "高い（回りすぎ注意）" },
+  { low: "Low (weak climb)", ok: "Just right", high: "High (watch for overspeed)" },
+);
 
 function rpmRow(rpm: number): string {
   const at = (x: number) => ((100 * (x - RPM_LO)) / (RPM_HI - RPM_LO)).toFixed(1);
   const verdict = staticRpmVerdict(rpm);
   return `<div class="pd-row pd-rpm ${verdict}">
-    <span class="pd-label">地上回転数<small class="pd-verdict">${VERDICT[verdict]}</small></span>
+    <span class="pd-label">${tr("地上回転数", "Static RPM")}<small class="pd-verdict">${VERDICT[verdict]}</small></span>
     <span class="pd-track">
       <em style="left:${at(2250)}%;width:${(+at(2350) - +at(2250)).toFixed(1)}%"></em>
       <u style="left:${at(rpm)}%"></u>
@@ -95,15 +99,23 @@ export function pitchDiagramHtml(pitch: PitchLevel): string {
   return `<div class="pitch-diagram">
     <figure>
       ${triangleSvg(pitch)}
-      <figcaption>ピッチは<b>羽根のねじれの角度</b>。ねじと同じで、角度が大きいほど1回転で前へ進もうとする距離が長い。
-      自転車でいえば、上昇型は<b>軽いギア</b>（よく回って力強いが速さは出ない）、巡航型は<b>重いギア</b>（速いが出だしが重い）。</figcaption>
+      <figcaption>${tr(
+      `ピッチは<b>羽根のねじれの角度</b>。ねじと同じで、角度が大きいほど1回転で前へ進もうとする距離が長い。
+      自転車でいえば、上昇型は<b>軽いギア</b>（よく回って力強いが速さは出ない）、巡航型は<b>重いギア</b>（速いが出だしが重い）。`,
+      `Pitch is the <b>twist angle of the blades</b>. Like a screw, the bigger the angle, the farther it tries to move forward in one turn.
+      On a bicycle, a climb prop is a <b>low gear</b> (spins easily and pulls hard, but isn't fast) and a cruise prop is a <b>high gear</b> (fast, but slow to get going).`,
+    )}
+  </figcaption>
     </figure>
     <div class="pd-bars">
-      ${barRow("巡航速度", "長いほど速い", all.map((f) => f.pitchSpeedFactor), pf.pitchSpeedFactor, true)}
-      ${barRow("上昇力", "長いほど強い", all.map((f) => f.climbFactor), pf.climbFactor, true)}
-      ${barRow("離陸距離", "短いほど良い", all.map((f) => f.takeoffDistFactor), pf.takeoffDistFactor, false)}
+      ${barRow(tr("巡航速度", "Cruise speed"), tr("長いほど速い", "longer = faster"), all.map((f) => f.pitchSpeedFactor), pf.pitchSpeedFactor, true)}
+      ${barRow(tr("上昇力", "Climb"), tr("長いほど強い", "longer = stronger"), all.map((f) => f.climbFactor), pf.climbFactor, true)}
+      ${barRow(tr("離陸距離", "Takeoff run"), tr("短いほど良い", "shorter = better"), all.map((f) => f.takeoffDistFactor), pf.takeoffDistFactor, false)}
       ${rpmRow(pf.staticRPM)}
-      <p class="small">縦線は「中間」の位置。地上回転数（止めたまま全開にしたときの回転）は、緑の帯に入れば適正。</p>
+      <p class="small">${tr(
+      "縦線は「中間」の位置。地上回転数（止めたまま全開にしたときの回転）は、緑の帯に入れば適正。",
+      "The vertical line marks the middle pitch. Static RPM (full throttle while held still) is right if it is in the green band.",
+    )}</p>
     </div>
   </div>`;
 }

@@ -61,6 +61,7 @@ import {
   turbulenceAt,
   turbulenceDamagePerMin,
 } from "../model/weather";
+import { tr } from "../i18n";
 
 export type FlightStatus =
   | "flying"
@@ -459,7 +460,13 @@ export function turnBack(s: FlightState): boolean {
   s.pending = s.pending.filter((p) => p.lateral === undefined);
   // 勇気ある撤退：焦りが下がる
   s.pilot.haste = Math.max(0, s.pilot.haste - HASTE_RELIEF);
-  s.alerts.push({ text: `180度旋回。${s.leg.from.name}へ引き返す（勇気ある撤退：焦り −${HASTE_RELIEF}）`, urgent: false });
+  s.alerts.push({
+    text: tr(
+      `180度旋回。${s.leg.from.name}へ引き返す（勇気ある撤退：焦り −${HASTE_RELIEF}）`,
+      `Turning 180°. Heading back to ${s.leg.from.name} (brave retreat: haste −${HASTE_RELIEF})`,
+    ),
+    urgent: false,
+  });
   refresh(s);
   return true;
 }
@@ -471,7 +478,7 @@ export function useRadio(s: FlightState): boolean {
   for (const i of s.forecast.items) s.known[i.id] = true;
   // 予報にあったが実際にはなかったもの
   s.radioReadyAt = s.elapsedMin + RADIO_COOLDOWN_MIN;
-  s.alerts.push({ text: "気象ラジオで最新の天気を受け取った", urgent: false });
+  s.alerts.push({ text: tr("気象ラジオで最新の天気を受け取った", "Got the latest weather on the radio"), urgent: false });
   return true;
 }
 
@@ -538,13 +545,13 @@ function substep(s: FlightState, dtMin: number): void {
   // 着陸のための降下と、コースへの戻り
   if (!s.approach && distanceLeft(s) <= descentDistanceKm(s, perf)) {
     s.approach = true;
-    s.alerts.push({ text: `${destination(s).name}への降下を始めた`, urgent: false });
+    s.alerts.push({ text: tr(`${destination(s).name}への降下を始めた`, `Starting the descent to ${destination(s).name}`), urgent: false });
   }
   const needToReturn = Math.abs(s.lateral) / Math.tan((DETOUR_ANGLE * Math.PI) / 180) + 5;
   if (!s.courseLocked && distanceLeft(s) < needToReturn + 10) {
     s.courseLocked = true;
     s.lateralTarget = 0;
-    if (Math.abs(s.lateral) > 1) s.alerts.push({ text: "目的地に向かうため、コースに戻る", urgent: false });
+    if (Math.abs(s.lateral) > 1) s.alerts.push({ text: tr("目的地に向かうため、コースに戻る", "Back on course for the destination"), urgent: false });
   }
 
   // 霧：目的地が見えるところまで来て霧なら、上空で待つ
@@ -553,10 +560,10 @@ function substep(s: FlightState, dtMin: number): void {
   const fogged = foggedAt(dest, clockMin(s), roll);
   if (!s.holding && s.approach && distanceLeft(s) < 12 && fogged) {
     s.holding = true;
-    s.alerts.push({ text: `${dest.name}は霧で滑走路が見えない。上空で待機する`, urgent: true });
+    s.alerts.push({ text: tr(`${dest.name}は霧で滑走路が見えない。上空で待機する`, `Fog hides the runway at ${dest.name}. Holding overhead`), urgent: true });
   } else if (s.holding && !fogged) {
     s.holding = false;
-    s.alerts.push({ text: "霧が晴れてきた。着陸に向かう", urgent: true });
+    s.alerts.push({ text: tr("霧が晴れてきた。着陸に向かう", "The fog is lifting. Going in to land"), urgent: true });
   }
   if (s.holding) {
     s.stats.holdMinutes += tMin;
@@ -598,7 +605,7 @@ function substep(s: FlightState, dtMin: number): void {
   const wasHasty = isHasty(s.pilot.haste);
   s.pilot.fatigue = Math.min(100, s.pilot.fatigue + FATIGUE_PER_FLIGHT_HOUR * t);
   s.pilot.haste = hasteAfter(s.pilot.haste, tMin, rushed(s) ? tMin : 0);
-  if (!wasHasty && isHasty(s.pilot.haste)) s.alerts.push({ text: "日が暮れる前に着けるだろうか…気持ちが焦ってきた", urgent: false });
+  if (!wasHasty && isHasty(s.pilot.haste)) s.alerts.push({ text: tr("日が暮れる前に着けるだろうか…気持ちが焦ってきた", "Will I make it before dark…? You're starting to feel rushed"), urgent: false });
   if (isHasty(s.pilot.haste)) s.stats.hastyMinutes += tMin;
   if (s.pilot.fatigue >= 80) s.stats.tiredMinutes += tMin;
   if (env.cbDistance < CB_DANGER_KM) s.stats.cbMinutes += tMin;
@@ -651,7 +658,10 @@ function watchNoReturn(s: FlightState) {
   if (canReturn(s)) return;
   s.pastNoReturn = true;
   s.alerts.push({
-    text: `引き返し限界点を越えた。もう${s.leg.from.name}へ戻る燃料はない。${s.leg.to.name}へ進むしかない`,
+    text: tr(
+      `引き返し限界点を越えた。もう${s.leg.from.name}へ戻る燃料はない。${s.leg.to.name}へ進むしかない`,
+      `Past the point of no return. There is no longer fuel to get back to ${s.leg.from.name}. The only way is on to ${s.leg.to.name}`,
+    ),
     urgent: true,
   });
 }
@@ -683,16 +693,16 @@ function discoverWeather(s: FlightState) {
 }
 
 function discoveryText(kind: string, d: number) {
-  const where = d < 1 ? "入った" : `${Math.round(d)} km 先に見える`;
+  const where = d < 1 ? tr("入った", "you're in it") : tr(`${Math.round(d)} km 先に見える`, `${Math.round(d)} km ahead`);
   switch (kind) {
     case "cb":
-      return `積乱雲が${where}！ 37 km 以上離れろ`;
+      return tr(`積乱雲が${where}！ 37 km 以上離れろ`, `Thunderstorm — ${where}! Stay at least 37 km away`);
     case "cloud":
-      return `雲が${where}。雲の下か上を飛ぶか、横によけろ`;
+      return tr(`雲が${where}。雲の下か上を飛ぶか、横によけろ`, `Cloud — ${where}. Fly under it, over it, or dodge sideways`);
     case "rain":
-      return `雨雲が${where}`;
+      return tr(`雨雲が${where}`, `Rain cloud — ${where}`);
     default:
-      return `乱気流に${where}。速度を落とせ`;
+      return tr(`乱気流に${where}。速度を落とせ`, `Turbulence — ${where}. Slow down`);
   }
 }
 
@@ -714,7 +724,10 @@ export interface FlightResult {
 export function evaluateFlight(s: FlightState): FlightResult {
   const r = evaluateFlightBase(s);
   if (!r.success && s.stats.hastyMinutes > 0)
-    r.mechanic += " …それに、焦っていたな。焦ると、危ないサインまで「まあ大丈夫だろう」に聞こえてしまう。";
+    r.mechanic += tr(
+      " …それに、焦っていたな。焦ると、危ないサインまで「まあ大丈夫だろう」に聞こえてしまう。",
+      " …And you were in a hurry. When you rush, even the danger signs sound like \"it'll probably be fine\".",
+    );
   return r;
 }
 
@@ -726,8 +739,11 @@ function evaluateFlightBase(s: FlightState): FlightResult {
   const dest = destination(s);
   // 海の上では降りる場所がない。着水して、船に助けられる
   const sea = overSea(s);
-  const ditch = "海に着水した。通りかかった漁船に助けられたが、機体は波にのまれた";
-  const down = sea ? ditch : "畑に不時着した";
+  const ditch = tr(
+    "海に着水した。通りかかった漁船に助けられたが、機体は波にのまれた",
+    "You ditched in the sea. A passing fishing boat picked you up, but the plane sank beneath the waves",
+  );
+  const down = sea ? ditch : tr("畑に不時着した", "You made a forced landing in a field");
 
   switch (s.status) {
     case "arrived": {
@@ -735,95 +751,137 @@ function evaluateFlightBase(s: FlightState): FlightResult {
       return reserve >= RESERVE_FUEL_L
         ? {
             success: true,
-            title: "安全に到着",
-            detail: `${dest.name}に着陸。燃料は ${reserve.toFixed(1)} L 残っている。`,
-            mechanic: "いい飛び方だ。遠くへ飛ぶ鍵は、速さより燃費と風だ。",
+            title: tr("安全に到着", "Safe arrival"),
+            detail: tr(`${dest.name}に着陸。燃料は ${reserve.toFixed(1)} L 残っている。`, `Landed at ${dest.name} with ${reserve.toFixed(1)} L of fuel left.`),
+            mechanic: tr("いい飛び方だ。遠くへ飛ぶ鍵は、速さより燃費と風だ。", "Nice flying. The key to flying far is economy and wind, not speed."),
           }
         : {
             success: true,
-            title: "到着（燃料ギリギリ）",
-            detail: `${dest.name}に着陸。でも燃料は ${reserve.toFixed(1)} L しか残っていない。`,
-            mechanic: `着いたのはいいが、予備燃料は30分ぶん（${RESERVE_FUEL_L} L くらい）は残しておけ。`,
+            title: tr("到着（燃料ギリギリ）", "Arrived (fuel very low)"),
+            detail: tr(`${dest.name}に着陸。でも燃料は ${reserve.toFixed(1)} L しか残っていない。`, `Landed at ${dest.name}, but with only ${reserve.toFixed(1)} L of fuel left.`),
+            mechanic: tr(
+              `着いたのはいいが、予備燃料は30分ぶん（${RESERVE_FUEL_L} L くらい）は残しておけ。`,
+              `Good that you made it, but keep 30 minutes of reserve (about ${RESERVE_FUEL_L} L).`,
+            ),
           };
     }
     case "returned":
       return {
         success: true,
-        title: "引き返して着陸",
-        detail: `${dest.name}に戻ってきた。`,
-        mechanic: "引き返すのも立派な判断だ。降りて待つのも正しい。",
+        title: tr("引き返して着陸", "Turned back and landed"),
+        detail: tr(`${dest.name}に戻ってきた。`, `Back at ${dest.name}.`),
+        mechanic: tr("引き返すのも立派な判断だ。降りて待つのも正しい。", "Turning back is a fine decision. Landing and waiting is right too."),
       };
     case "fuelOut":
       return {
         success: false,
-        title: "燃料切れ",
-        detail: `${dest.name}まであと ${left} km のところで燃料が尽き、${down}。`,
+        title: tr("燃料切れ", "Out of fuel"),
+        detail: tr(`${dest.name}まであと ${left} km のところで燃料が尽き、${down}。`, `The fuel ran out ${left} km short of ${dest.name}. ${down}.`),
         mechanic: sea && s.pastNoReturn
-          ? "海の上では、引き返し限界点を越える前に決めるんだ。燃料の残りと、戻るのに要る量を見比べろ。"
+          ? tr(
+              "海の上では、引き返し限界点を越える前に決めるんだ。燃料の残りと、戻るのに要る量を見比べろ。",
+              "Over the sea, decide before the point of no return. Compare the fuel left with what you need to get back.",
+            )
           : richMostly
-          ? "混合比が濃いままだったな。ちょうどよく薄くするだけで、燃費は2割近く良くなる。"
+          ? tr(
+                "混合比が濃いままだったな。ちょうどよく薄くするだけで、燃費は2割近く良くなる。",
+                "You left the mixture rich. Just leaning it properly improves economy by almost 20%.",
+              )
           : avgThrottle > 0.85
-            ? "出力を上げすぎだ。向かい風の日は、速さより燃費を考えろ。"
-            : "積む燃料が足りなかったか、燃費が悪かった。よけた距離や待った時間のぶんも、燃料は減る。",
+            ? tr("出力を上げすぎだ。向かい風の日は、速さより燃費を考えろ。", "Too much power. On a headwind day, think economy, not speed.")
+            : tr(
+                  "積む燃料が足りなかったか、燃費が悪かった。よけた距離や待った時間のぶんも、燃料は減る。",
+                  "Either you didn't load enough fuel or your economy was poor. Detours and waiting burn fuel too.",
+                ),
       };
     case "engineStopped":
       return {
         success: false,
-        title: "エンジン停止",
-        detail: `エンジンが傷んで止まってしまった。${dest.name}まであと ${left} km。${sea ? `${ditch}。` : ""}`,
+        title: tr("エンジン停止", "Engine failure"),
+        detail: tr(
+          `エンジンが傷んで止まってしまった。${dest.name}まであと ${left} km。${sea ? `${ditch}。` : ""}`,
+          `The damaged engine stopped, ${left} km short of ${dest.name}.${sea ? ` ${ditch}.` : ""}`,
+        ),
         mechanic:
           s.stats.overspeedMinutes > 3
-            ? "回転数がレッドラインを超えていた。降下や全開のときは回転計を見て絞れ。"
-            : "エンジンが荒れたら薄すぎの合図だ。荒れ始める手前で止めろ。",
+            ? tr("回転数がレッドラインを超えていた。降下や全開のときは回転計を見て絞れ。", "The RPM went past the red line. In the descent and at full throttle, watch the tachometer and throttle back.")
+            : tr("エンジンが荒れたら薄すぎの合図だ。荒れ始める手前で止めろ。", "A rough engine means too lean. Stop just before it starts running rough."),
       };
     case "sunset":
       return {
         success: false,
-        title: "日没",
+        title: tr("日没", "Sunset"),
         detail: sea
-          ? `${dest.name}まであと ${left} km の海の上で日が暮れた。暗い海では陸の方向もわからない。${ditch}。`
-          : `${dest.name}まであと ${left} km のところで日が暮れた。暗くなる前に近くの原っぱへ降りた。`,
-        mechanic: "出発が遅かったか、絞りすぎた。日の入りに間に合わないなら、泊まって朝に出るのも正しい判断だ。",
+          ? tr(
+              `${dest.name}まであと ${left} km の海の上で日が暮れた。暗い海では陸の方向もわからない。${ditch}。`,
+              `Night fell over the sea, ${left} km short of ${dest.name}. Over a dark sea you can't even tell which way land is. ${ditch}.`,
+            )
+          : tr(
+              `${dest.name}まであと ${left} km のところで日が暮れた。暗くなる前に近くの原っぱへ降りた。`,
+              `The sun set ${left} km short of ${dest.name}. You landed in a nearby meadow before it got dark.`,
+            ),
+        mechanic: tr(
+          "出発が遅かったか、絞りすぎた。日の入りに間に合わないなら、泊まって朝に出るのも正しい判断だ。",
+          "You left too late or throttled back too far. If you can't make it before sunset, staying the night and leaving in the morning is a right call.",
+        ),
       };
     case "propFailure":
       return s.failure === "propOff"
         ? {
             success: false,
-            title: "プロペラが外れた",
-            detail: `ゆるんだボルトが抜け、プロペラが外れた。${dest.name}まであと ${left} km。${down}。`,
-            mechanic: "気候の違う土地に着いたら、まず締め直せ。木は湿気で縮んだりふくらんだりする。",
+            title: tr("プロペラが外れた", "Propeller came off"),
+            detail: tr(
+          `ゆるんだボルトが抜け、プロペラが外れた。${dest.name}まであと ${left} km。${down}。`,
+          `The loose bolts worked out and the propeller came off, ${left} km short of ${dest.name}. ${down}.`,
+        ),
+            mechanic: tr("気候の違う土地に着いたら、まず締め直せ。木は湿気で縮んだりふくらんだりする。", "When you land somewhere with a different climate, re-tighten first. Wood shrinks and swells with humidity."),
           }
         : {
             success: false,
-            title: "プロペラが割れた",
-            detail: `強い振動が続いて、木のプロペラが割れた。${dest.name}まであと ${left} km。${down}。`,
-            mechanic: "振動は総合的な警告だ。出たら原因を探せ。ボルトのゆるみか、前縁の傷か、着氷か。",
+            title: tr("プロペラが割れた", "Propeller cracked"),
+            detail: tr(
+          `強い振動が続いて、木のプロペラが割れた。${dest.name}まであと ${left} km。${down}。`,
+          `Heavy vibration went on until the wooden propeller cracked, ${left} km short of ${dest.name}. ${down}.`,
+        ),
+            mechanic: tr("振動は総合的な警告だ。出たら原因を探せ。ボルトのゆるみか、前縁の傷か、着氷か。", "Vibration is a catch-all warning. When it shows up, find the cause: loose bolts, a nicked leading edge, or ice."),
           };
     case "lostControl":
       return {
         success: false,
-        title: "雲の中で迷った",
-        detail: `雲の中で上下がわからなくなり、気づいたら急な旋回降下に入っていた。なんとか雲の下に出て、${down}。`,
-        mechanic: "計器飛行の訓練がないなら、雲には入るな。雲が低くなってきたら、早めに引き返せ。",
+        title: tr("雲の中で迷った", "Lost in cloud"),
+        detail: tr(
+          `雲の中で上下がわからなくなり、気づいたら急な旋回降下に入っていた。なんとか雲の下に出て、${down}。`,
+          `In the cloud you lost track of up and down, and found yourself in a steep spiral dive. You somehow came out below the cloud. ${down}.`,
+        ),
+        mechanic: tr("計器飛行の訓練がないなら、雲には入るな。雲が低くなってきたら、早めに引き返せ。", "Without instrument training, stay out of cloud. When the cloud comes down low, turn back early."),
       };
     case "airframe":
       return {
         success: false,
-        title: "機体が壊れた",
-        detail: `${s.env.cbDistance < 40 ? "積乱雲の近くの激しい揺れ" : "乱気流の中を速いまま飛んだ"}せいで、機体が傷んで飛べなくなった。${down}。`,
+        title: tr("機体が壊れた", "Airframe failure"),
+        detail: tr(
+          `${s.env.cbDistance < 40 ? "積乱雲の近くの激しい揺れ" : "乱気流の中を速いまま飛んだ"}せいで、機体が傷んで飛べなくなった。${down}。`,
+          `${s.env.cbDistance < 40 ? "Violent shaking near a thunderstorm" : "Flying fast through turbulence"} damaged the airframe until it could no longer fly. ${down}.`,
+        ),
         mechanic:
           s.env.cbDistance < 40
-            ? "積乱雲には近づくな。37 km 以上離れるか、消えるまで待て。"
-            : "揺れたら速度を落とせ。設計運動速度（140 km/h）より遅くすれば、機体は耐えられる。",
+            ? tr("積乱雲には近づくな。37 km 以上離れるか、消えるまで待て。", "Stay away from thunderstorms. Keep at least 37 km away, or wait until they die out.")
+            : tr(
+              "揺れたら速度を落とせ。設計運動速度（140 km/h）より遅くすれば、機体は耐えられる。",
+              "When it gets rough, slow down. Below the maneuvering speed (140 km/h), the airframe can take it.",
+            ),
       };
     case "terrain":
       return {
         success: false,
-        title: "山にぶつかりそうになった",
-        detail: "高度が足りず、山の斜面が目の前に迫った。急旋回でかわして、谷あいの畑に不時着した。",
-        mechanic: "山越えには十分な高度が要る。雲に押されて低く飛ぶくらいなら、引き返せ。",
+        title: tr("山にぶつかりそうになった", "Nearly hit the mountain"),
+        detail: tr(
+          "高度が足りず、山の斜面が目の前に迫った。急旋回でかわして、谷あいの畑に不時着した。",
+          "Without enough height, the mountainside loomed right in front of you. You dodged it with a steep turn and made a forced landing in a valley field.",
+        ),
+        mechanic: tr("山越えには十分な高度が要る。雲に押されて低く飛ぶくらいなら、引き返せ。", "Crossing mountains takes plenty of height. If cloud is pushing you down low, turn back."),
       };
     case "flying":
-      return { success: false, title: "飛行中", detail: "", mechanic: "" };
+      return { success: false, title: tr("飛行中", "In flight"), detail: "", mechanic: "" };
   }
 }

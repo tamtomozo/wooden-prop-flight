@@ -14,6 +14,10 @@
   font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
   color: var(--text);
 }
+/* 英語版は欧文フォントを先に（日本語の字が混ざったときだけ和文フォント） */
+:root:lang(en) {
+  font-family: system-ui, "Segoe UI", "Helvetica Neue", Arial, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+}
 
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); }
@@ -240,6 +244,8 @@ button { font: inherit; }
 /* 操縦者（疲労・焦り） */
 .pilot { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; }
 .pmeter { display: grid; grid-template-columns: 2.4em 1fr auto; gap: 6px; align-items: center; font-size: 0.75rem; }
+/* 英語の「Fatigue」「Haste」は2文字の漢字より長い */
+:root:lang(en) .pmeter { grid-template-columns: 3.6em 1fr auto; }
 .pmeter .st-bar { background: #3a3f46; }
 .pm-name { font-weight: 700; color: var(--muted); }
 .pm-word { font-size: 0.72rem; white-space: nowrap; }
@@ -1081,11 +1087,17 @@ button { font: inherit; }
   animation: title-blink 1.8s ease-in-out infinite;
 }
 @keyframes title-blink { 50% { opacity: 0.35; } }
-/* 右上の「ゲームの紹介ページ」（lp/ のランディングページへ） */
-.title-lp {
+/* 右上の「English / 日本語」と「ゲームの紹介ページ」（lp/ のランディングページへ） */
+.title-links {
   position: absolute;
   top: 14px;
   right: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.title-lp,
+.title-lang {
   padding: 6px 14px;
   border: 1px solid rgba(255, 255, 255, 0.55);
   border-radius: 999px;
@@ -1096,8 +1108,9 @@ button { font: inherit; }
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 .title-lp::after { content: " →"; color: var(--accent); }
-.title-lp:hover { background: rgba(10, 12, 15, 0.6); border-color: var(--accent); }
-.title-lp:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.title-lang { font: inherit; font-size: 0.85rem; cursor: pointer; }
+.title-lp:hover, .title-lang:hover { background: rgba(10, 12, 15, 0.6); border-color: var(--accent); }
+.title-lp:focus-visible, .title-lang:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .title-prop .blades, .title-start { animation: none; }
 }

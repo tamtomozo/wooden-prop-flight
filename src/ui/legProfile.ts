@@ -15,6 +15,7 @@ import {
 import { terrainAt } from "../game/flight";
 import type { Forecast, Leg } from "../model/types";
 import { fogChance, headwindAt } from "../model/weather";
+import { tr } from "../i18n";
 
 export interface LegProfileInput {
   leg: Leg;
@@ -43,7 +44,12 @@ const Y_BASE = 190; // 標高 0 m
 const H = 236;
 
 function sideText(lateral: number, half: number) {
-  return Math.abs(lateral) <= half ? "" : `・コースの${lateral < 0 ? "左" : "右"} ${Math.round(Math.abs(lateral))} km`;
+  return Math.abs(lateral) <= half
+    ? ""
+    : tr(
+        `・コースの${lateral < 0 ? "左" : "右"} ${Math.round(Math.abs(lateral))} km`,
+        ` · ${Math.round(Math.abs(lateral))} km ${lateral < 0 ? "left" : "right"} of course`,
+      );
 }
 
 function profileSvg(i: LegProfileInput): string {
@@ -61,7 +67,7 @@ function profileSvg(i: LegProfileInput): string {
   const sea = leg.sea
     .map(
       (r) => `<rect class="lp-sea" x="${sx(r.fromKm).toFixed(1)}" y="${Y_BASE - 5}" width="${(sx(r.toKm) - sx(r.fromKm)).toFixed(1)}" height="5" />
-      <text class="lp-t lp-sea-t" x="${sx((r.fromKm + r.toKm) / 2).toFixed(1)}" y="${Y_BASE - 9}" text-anchor="middle">海の上 ${r.toKm - r.fromKm} km（降りられない）</text>`,
+      <text class="lp-t lp-sea-t" x="${sx((r.fromKm + r.toKm) / 2).toFixed(1)}" y="${Y_BASE - 9}" text-anchor="middle">${tr(`海の上 ${r.toKm - r.fromKm} km（降りられない）`, `Over water ${r.toKm - r.fromKm} km (no landing)`)}</text>`,
     )
     .join("");
   const N = 120;
@@ -89,14 +95,14 @@ function profileSvg(i: LegProfileInput): string {
       const c = it.cloud;
       const off = Math.abs(c.lateralKm) > c.halfWidthKm;
       wx.push(`<rect class="lp-cloud ${off ? "off" : ""}" x="${sx(c.fromKm)}" y="${sy(c.top)}" width="${sx(c.toKm) - sx(c.fromKm)}" height="${sy(c.base) - sy(c.top)}" rx="10" style="opacity:${op(it.prob)}" />`);
-      labels.push(`<text class="lp-t lp-cloud-t" x="${sx(c.fromKm) + 5}" y="${sy(c.top) + 11}">${it.rain ? "雨雲" : "雲"} ${pctTxt(it.prob)}${sideText(c.lateralKm, c.halfWidthKm)}</text>`);
+      labels.push(`<text class="lp-t lp-cloud-t" x="${sx(c.fromKm) + 5}" y="${sy(c.top) + 11}">${it.rain ? tr("雨雲", "Rain cloud") : tr("雲", "Cloud")} ${pctTxt(it.prob)}${sideText(c.lateralKm, c.halfWidthKm)}</text>`);
     }
     if (it.rain) {
       const r = it.rain;
       const top = it.cloud ? it.cloud.base : 1500;
       const gl = Math.min(ground(r.fromKm), ground(r.toKm));
       wx.push(`<rect class="lp-rain" x="${sx(r.fromKm)}" y="${sy(top)}" width="${sx(r.toKm) - sx(r.fromKm)}" height="${sy(gl) - sy(top)}" style="opacity:${op(it.prob)}" />`);
-      if (!it.cloud) labels.push(`<text class="lp-t lp-rain-t" x="${sx(r.fromKm) + 4}" y="${sy(top) - 4}">雨 ${pctTxt(it.prob)}</text>`);
+      if (!it.cloud) labels.push(`<text class="lp-t lp-rain-t" x="${sx(r.fromKm) + 4}" y="${sy(top) - 4}">${tr("雨", "Rain")} ${pctTxt(it.prob)}</text>`);
     }
     if (it.cb) {
       const c = it.cb;
@@ -108,7 +114,7 @@ function profileSvg(i: LegProfileInput): string {
       const a = sx(c.alongKm - CB_DANGER_KM);
       const b = sx(c.alongKm + CB_DANGER_KM);
       wx.push(`<path class="lp-danger" d="M${a},${Y_TOP - 6} v6 M${a},${Y_TOP - 3} H${b} M${b},${Y_TOP - 6} v6" />`);
-      labels.push(`<text class="lp-t lp-cb-t" x="${x}" y="${Y_TOP - 9}" text-anchor="middle">積乱雲 ${pctTxt(it.prob)}${sideText(c.lateralKm, c.radiusKm)}・${CB_DANGER_KM} km 以内に近づかない</text>`);
+      labels.push(`<text class="lp-t lp-cb-t" x="${x}" y="${Y_TOP - 9}" text-anchor="middle">${tr("積乱雲", "Thunderstorm")} ${pctTxt(it.prob)}${sideText(c.lateralKm, c.radiusKm)}${tr(`・${CB_DANGER_KM} km 以内に近づかない`, ` · keep ${CB_DANGER_KM} km away`)}</text>`);
     }
   }
 
@@ -121,14 +127,14 @@ function profileSvg(i: LegProfileInput): string {
       const b = sx(t.toKm);
       let wave = `M${a},${Y_BASE + 26}`;
       for (let x = a; x < b; x += 8) wave += ` q2,-5 4,0 q2,5 4,0`;
-      return `<g style="opacity:${op(it.prob)}"><path class="lp-turb" d="${wave}" /><text class="lp-t lp-turb-t" x="${a}" y="${Y_BASE + 40}">揺れ（強さ${t.intensity}） ${pctTxt(it.prob)}${sideText(t.lateralKm, t.halfWidthKm)}</text></g>`;
+      return `<g style="opacity:${op(it.prob)}"><path class="lp-turb" d="${wave}" /><text class="lp-t lp-turb-t" x="${a}" y="${Y_BASE + 40}">${tr(`揺れ（強さ${t.intensity}）`, `Turbulence (${t.intensity})`)} ${pctTxt(it.prob)}${sideText(t.lateralKm, t.halfWidthKm)}</text></g>`;
     })
     .join("");
 
   // 目盛り
   const altTicks: string[] = [];
   for (let a = 0; a <= maxAlt; a += 1000)
-    altTicks.push(`<line class="lp-grid" x1="${X0}" x2="${X1}" y1="${sy(a)}" y2="${sy(a)}" /><text class="lp-t" x="${X0 - 4}" y="${sy(a) + 3}" text-anchor="end">${a === 0 ? "0" : `${a / 1000}千m`}</text>`);
+    altTicks.push(`<line class="lp-grid" x1="${X0}" x2="${X1}" y1="${sy(a)}" y2="${sy(a)}" /><text class="lp-t" x="${X0 - 4}" y="${sy(a) + 3}" text-anchor="end">${a === 0 ? "0" : tr(`${a / 1000}千m`, `${a / 1000}k m`)}</text>`);
   const kmStep = D > 150 ? 50 : 25;
   const kmTicks: string[] = [];
   for (let k = 0; k <= D; k += kmStep) kmTicks.push(`<text class="lp-t" x="${sx(k)}" y="${Y_BASE + 12}" text-anchor="middle">${k} km</text>`);
@@ -136,7 +142,7 @@ function profileSvg(i: LegProfileInput): string {
   // 凍結高度
   const frz =
     f.freezingLevel < maxAlt
-      ? `<line class="lp-frz" x1="${X0}" x2="${X1}" y1="${sy(f.freezingLevel)}" y2="${sy(f.freezingLevel)}" /><text class="lp-t lp-frz-t" x="${X1 - 4}" y="${sy(f.freezingLevel) - 3}" text-anchor="end">凍結高度 ${f.freezingLevel} m（雲の中で着氷）</text>`
+      ? `<line class="lp-frz" x1="${X0}" x2="${X1}" y1="${sy(f.freezingLevel)}" y2="${sy(f.freezingLevel)}" /><text class="lp-t lp-frz-t" x="${X1 - 4}" y="${sy(f.freezingLevel) - 3}" text-anchor="end">${tr(`凍結高度 ${f.freezingLevel} m（雲の中で着氷）`, `Freezing level ${f.freezingLevel} m (icing in cloud)`)}</text>`
       : "";
 
   // 高度別の風（右の欄）。左向きの矢印＝向かい風、右向き＝追い風
@@ -156,7 +162,7 @@ function profileSvg(i: LegProfileInput): string {
     })
     .join("");
 
-  return `<svg class="lp-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${leg.from.name}から${leg.to.name}までの断面図">
+  return `<svg class="lp-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${tr(`${leg.from.name}から${leg.to.name}までの断面図`, `Profile from ${leg.from.name} to ${leg.to.name}`)}">
     <defs>
       <pattern id="lp-rain-pat" width="6" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(12)"><line x1="3" y1="0" x2="3" y2="5" class="lp-rain-line" /></pattern>
       <marker id="lp-arrow-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 Z" class="lp-ah head" /></marker>
@@ -169,7 +175,7 @@ function profileSvg(i: LegProfileInput): string {
     ${sea}
     ${leg.terrain.map((r) => `<text class="lp-t lp-ridge-t" x="${sx((r.fromKm + r.toKm) / 2)}" y="${sy(r.height) - 4}" text-anchor="middle">${r.name} ${r.height} m</text>`).join("")}
     <path class="lp-path" d="${path}" />
-    <text class="lp-t lp-path-t" x="${sx(climbKm) + 4}" y="${sy(cruise) - 4}">すすめの巡航高度 ${cruise} m</text>
+    <text class="lp-t lp-path-t" x="${sx(climbKm) + 4}" y="${sy(cruise) - 4}">${tr("すすめの巡航高度", "Suggested cruise altitude")} ${cruise} m</text>
     ${labels.join("")}
     <circle class="lp-field" cx="${sx(0)}" cy="${sy(leg.from.elevation)}" r="3.5" />
     <circle class="lp-field" cx="${sx(D)}" cy="${sy(leg.to.elevation)}" r="3.5" />
@@ -177,7 +183,7 @@ function profileSvg(i: LegProfileInput): string {
     <text class="lp-t lp-field-t" x="${sx(D) - 6}" y="${sy(leg.to.elevation) - 6}" text-anchor="end">${leg.to.name}</text>
     ${kmTicks.join("")}
     ${turb}
-    <text class="lp-t" x="${X1 + 40}" y="${Y_TOP - 9}" text-anchor="middle">風 km/h</text>
+    <text class="lp-t" x="${X1 + 40}" y="${Y_TOP - 9}" text-anchor="middle">${tr("風 km/h", "Wind km/h")}</text>
     ${winds}
   </svg>`;
 }
@@ -191,13 +197,16 @@ function timeCard(i: LegProfileInput): string {
   const p = (t: number) => `${Math.max(0, Math.min(100, (100 * (t - i.nowMin)) / span)).toFixed(1)}%`;
   const ok = eta <= limit;
   return `<div class="lp-card">
-    <div class="fd-head"><b>時間</b><span class="${ok ? "" : "ng-text"}">約${Math.round(i.est.minutes)}分・到着 ${eta < 24 * 60 ? fmtClock(eta) : "—"}</span></div>
+    <div class="fd-head"><b>${tr("時間", "Time")}</b><span class="${ok ? "" : "ng-text"}">${tr(`約${Math.round(i.est.minutes)}分・到着`, `about ${Math.round(i.est.minutes)} min · arrive`)} ${eta < 24 * 60 ? fmtClock(eta) : "—"}</span></div>
     <div class="lp-bar">
       <i class="${ok ? "ok" : "ng"}" style="width:${p(eta)}"></i>
       <em class="limit" style="left:${p(limit)}"></em><em class="sunset" style="left:${p(i.sunsetMin)}"></em>
     </div>
-    <div class="lp-scale"><span>いま ${fmtClock(i.nowMin)}</span><span>日没 ${fmtClock(i.sunsetMin)}</span></div>
-    <p class="fd-note">黄の線は日没の${SUNSET_MARGIN_MIN}分前。そこまでに着きたい。${ok ? "" : "<b class=\"ng-text\">間に合わない</b>：泊まって朝に出るのも手。"}よける遠回りや待ち時間は入っていない。</p>
+    <div class="lp-scale"><span>${tr("いま", "Now")} ${fmtClock(i.nowMin)}</span><span>${tr("日没", "Sunset")} ${fmtClock(i.sunsetMin)}</span></div>
+    <p class="fd-note">${tr(
+      `黄の線は日没の${SUNSET_MARGIN_MIN}分前。そこまでに着きたい。${ok ? "" : "<b class=\"ng-text\">間に合わない</b>：泊まって朝に出るのも手。"}よける遠回りや待ち時間は入っていない。`,
+      `The yellow line is ${SUNSET_MARGIN_MIN} min before sunset. Try to land by then. ${ok ? "" : "<b class=\"ng-text\">You won't make it</b>: staying the night and leaving in the morning is an option. "}Detours and waiting are not included.`,
+    )}</p>
   </div>`;
 }
 
@@ -207,13 +216,16 @@ function fuelCard(i: LegProfileInput): string {
   const p = (l: number) => `${Math.max(0, Math.min(100, (100 * l) / i.capacityL)).toFixed(1)}%`;
   const ok = i.fuelL >= need + RESERVE_FUEL_L;
   return `<div class="lp-card">
-    <div class="fd-head"><b>燃料</b><span class="${ok ? "" : "ng-text"}">今 ${i.fuelL.toFixed(0)} L ${ok ? "○" : "足りないかも"}</span></div>
+    <div class="fd-head"><b>${tr("燃料", "Fuel")}</b><span class="${ok ? "" : "ng-text"}">${tr("今", "Now")} ${i.fuelL.toFixed(0)} L ${ok ? "○" : tr("足りないかも", "may not be enough")}</span></div>
     <div class="lp-bar lp-fuel">
       <i class="have" style="width:${p(i.fuelL)}"></i>
       <span class="need" style="width:${p(need)}"></span><span class="res" style="left:${p(need)};width:${p(RESERVE_FUEL_L)}"></span>
     </div>
     <div class="lp-scale"><span>0</span><span>${i.capacityL} L</span></div>
-    <p class="fd-note">白い枠がこの区間で使う目安（約${need.toFixed(0)} L）、赤い斜線が予備 ${RESERVE_FUEL_L} L。青い棒がそこまで届けば足りる。</p>
+    <p class="fd-note">${tr(
+      `白い枠がこの区間で使う目安（約${need.toFixed(0)} L）、赤い斜線が予備 ${RESERVE_FUEL_L} L。青い棒がそこまで届けば足りる。`,
+      `The white frame is the estimate for this leg (about ${need.toFixed(0)} L); the red stripes are the ${RESERVE_FUEL_L} L reserve. If the blue bar reaches past them, you have enough.`,
+    )}</p>
   </div>`;
 }
 
@@ -221,17 +233,23 @@ function fogCard(i: LegProfileInput): string {
   const chance = fogChance(i.destSpread);
   const fill = Math.max(0, Math.min(1, 1 - i.destSpread / 8));
   return `<div class="lp-card">
-    <div class="fd-head"><b>着く先の霧</b><span class="${chance > 0 ? "ng-text" : ""}">${Math.round(chance * 100)}%</span></div>
+    <div class="fd-head"><b>${tr("着く先の霧", "Fog at destination")}</b><span class="${chance > 0 ? "ng-text" : ""}">${Math.round(chance * 100)}%</span></div>
     <div class="lp-bar"><i class="${chance > 0 ? "ng" : "ok"}" style="width:${(fill * 100).toFixed(0)}%"></i></div>
-    <div class="lp-scale"><span>出にくい</span><span>出やすい</span></div>
-    <p class="fd-note">到着予定ごろの気温と露点の差 ${i.destSpread.toFixed(1)}℃。差が小さいほど霧が出る。${chance > 0 ? "霧なら上空で待つか、引き返す。" : ""}</p>
+    <div class="lp-scale"><span>${tr("出にくい", "Unlikely")}</span><span>${tr("出やすい", "Likely")}</span></div>
+    <p class="fd-note">${tr(
+      `到着予定ごろの気温と露点の差 ${i.destSpread.toFixed(1)}℃。差が小さいほど霧が出る。${chance > 0 ? "霧なら上空で待つか、引き返す。" : ""}`,
+      `Temperature–dew point spread around your ETA: ${i.destSpread.toFixed(1)}°C. The smaller the spread, the likelier fog is. ${chance > 0 ? "If it is foggy, hold overhead or turn back." : ""}`,
+    )}</p>
   </div>`;
 }
 
 export function legProfileHtml(i: LegProfileInput): string {
   return `<div class="leg-profile">
     <div class="lp-scroll">${profileSvg(i)}</div>
-    <p class="fd-note">横から見た図（出発地 → 着く先）。破線がすすめの飛び方、雲や雨は濃いほど確率が高い。予報なので位置や高さは実際とずれることがある。右の欄の矢印は高度ごとの風（<span class="lp-key head">←向かい風</span>・<span class="lp-key tail">追い風→</span>）。</p>
+    <p class="fd-note">${tr(
+      `横から見た図（出発地 → 着く先）。破線がすすめの飛び方、雲や雨は濃いほど確率が高い。予報なので位置や高さは実際とずれることがある。右の欄の矢印は高度ごとの風（<span class="lp-key head">←向かい風</span>・<span class="lp-key tail">追い風→</span>）。`,
+      `Side view (departure → destination). The dashed line is the suggested flight path; the darker the cloud or rain, the higher the chance. It is a forecast, so places and heights may be off. The arrows on the right are the wind at each height (<span class="lp-key head">←headwind</span> · <span class="lp-key tail">tailwind→</span>).`,
+    )}</p>
     <div class="lp-cards">${timeCard(i)}${fuelCard(i)}${fogCard(i)}</div>
   </div>`;
 }

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>木製プロペラ長距離飛行</title>
+    <title data-en="Wooden Prop Long Flight">木製プロペラ長距離飛行</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='14' y='2' width='4' height='28' rx='2' fill='%238b5a2b'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23c9433a'/%3E%3C/svg%3E" />
   </head>
   <body>
@@ -13,18 +13,18 @@
         <div class="route" id="route"></div>
         <div class="clock">
           <strong id="day">1日目</strong>
-          <span class="label">時刻</span> <strong id="clock">9:00</strong>
-          <span class="label">日没</span> <span id="sunset">17:30</span>
+          <span class="label" data-en="Time">時刻</span> <strong id="clock">9:00</strong>
+          <span class="label" data-en="Sunset">日没</span> <span id="sunset">17:30</span>
         </div>
         <div class="buttons">
-          <button id="sound" title="エンジン音などのオン／オフ">音：オン</button>
-          <button id="pause" title="一時停止（スペース）">一時停止</button>
-          <span class="speed" role="group" aria-label="時間の速さ">
+          <button id="sound" title="エンジン音などのオン／オフ" data-en-title="Engine sound etc. on / off">音：オン</button>
+          <button id="pause" title="一時停止（スペース）" data-en-title="Pause (Space)" data-en="Pause">一時停止</button>
+          <span class="speed" role="group" aria-label="時間の速さ" data-en-label="Time speed">
             <button data-speed="1" class="on">×1</button>
             <button data-speed="2">×2</button>
             <button data-speed="4">×4</button>
           </span>
-          <label class="toggle"><input type="checkbox" id="details" /> 数値</label>
+          <label class="toggle"><input type="checkbox" id="details" /><span data-en=" Numbers"> 数値</span></label>
         </div>
       </header>
 
@@ -38,10 +38,10 @@
             <div class="clip"></div>
             <div class="kb-title" id="kb-title"></div>
             <dl>
-              <div class="kb-row" id="kb-ground"><dt>対地速度</dt><dd><span class="v"></span><span class="note"></span></dd></div>
-              <div class="kb-row" id="kb-range"><dt>届く距離</dt><dd><span class="v"></span><span class="note"></span></dd></div>
-              <div class="kb-row" id="kb-eta"><dt>到着予定</dt><dd><span class="v"></span><span class="note"></span></dd></div>
-              <div class="kb-row" id="kb-ahead"><dt>前方の天気</dt><dd><span class="v"></span><span class="note"></span></dd></div>
+              <div class="kb-row" id="kb-ground"><dt data-en="Ground speed">対地速度</dt><dd><span class="v"></span><span class="note"></span></dd></div>
+              <div class="kb-row" id="kb-range"><dt data-en="Range">届く距離</dt><dd><span class="v"></span><span class="note"></span></dd></div>
+              <div class="kb-row" id="kb-eta"><dt data-en="ETA">到着予定</dt><dd><span class="v"></span><span class="note"></span></dd></div>
+              <div class="kb-row" id="kb-ahead"><dt data-en="Weather ahead">前方の天気</dt><dd><span class="v"></span><span class="note"></span></dd></div>
             </dl>
           </div>
 
@@ -49,7 +49,7 @@
           <div class="stage-bottom">
             <div class="tut-task" id="tut-task" hidden></div>
             <div class="toast" id="toast" hidden></div>
-            <p class="mechanic"><span class="who">整備士</span><span id="advice"></span></p>
+            <p class="mechanic"><span class="who" data-en="Mechanic">整備士</span><span id="advice"></span></p>
           </div>
         </div>
         <canvas id="routebar"></canvas>
@@ -57,27 +57,27 @@
 
       <section class="cockpit" id="panel">
         <div class="gauges">
-          <canvas class="gauge" id="g-asi" data-param="ASI" title="クリックで整備士のひとこと"></canvas>
-          <canvas class="gauge" id="g-alt" data-param="ALT" title="クリックで整備士のひとこと"></canvas>
-          <canvas class="gauge" id="g-tach" data-param="C1" title="クリックで整備士のひとこと"></canvas>
-          <canvas class="gauge" id="g-egt" data-param="EGT" title="クリックで整備士のひとこと"></canvas>
-          <canvas class="gauge" id="g-fuel" data-param="FUEL" title="クリックで整備士のひとこと"></canvas>
-          <canvas class="gauge" id="g-engine" data-param="B4" title="クリックで整備士のひとこと"></canvas>
+          <canvas class="gauge" id="g-asi" data-param="ASI" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic"></canvas>
+          <canvas class="gauge" id="g-alt" data-param="ALT" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic"></canvas>
+          <canvas class="gauge" id="g-tach" data-param="C1" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic"></canvas>
+          <canvas class="gauge" id="g-egt" data-param="EGT" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic"></canvas>
+          <canvas class="gauge" id="g-fuel" data-param="FUEL" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic"></canvas>
+          <canvas class="gauge" id="g-engine" data-param="B4" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic"></canvas>
         </div>
 
         <div class="quadrant">
           <label class="lever throttle" title="W / S">
-            <span class="end">全開</span>
+            <span class="end" data-en="Full">全開</span>
             <span class="slot"><input type="range" id="throttle" min="20" max="100" step="1" /></span>
-            <span class="end">絞る</span>
-            <span class="lever-name" data-param="C1" title="クリックで整備士のひとこと">スロットル</span>
+            <span class="end" data-en="Idle">絞る</span>
+            <span class="lever-name" data-param="C1" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic" data-en="Throttle">スロットル</span>
             <output id="throttle-out"></output>
           </label>
           <label class="lever mixture" title="A / D">
-            <span class="end">濃い</span>
+            <span class="end" data-en="Rich">濃い</span>
             <span class="slot"><input type="range" id="mixture" min="0" max="100" step="1" /></span>
-            <span class="end">薄い</span>
-            <span class="lever-name" data-param="C2" title="クリックで整備士のひとこと">ミクスチャー</span>
+            <span class="end" data-en="Lean">薄い</span>
+            <span class="lever-name" data-param="C2" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic" data-en="Mixture">ミクスチャー</span>
             <output id="mixture-out"></output>
           </label>
         </div>
@@ -85,36 +85,36 @@
         <div class="side">
           <div class="nav">
             <div class="navbox" id="nav-alt">
-              <span class="nav-name" data-param="C4" title="クリックで整備士のひとこと">高度</span>
+              <span class="nav-name" data-param="C4" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic" data-en="Altitude">高度</span>
               <button data-nav="alt-down" title="F">▼</button>
               <output id="alt-target"></output>
               <button data-nav="alt-up" title="R">▲</button>
             </div>
             <div class="navbox" id="nav-course">
-              <span class="nav-name" data-param="COURSE" title="クリックで整備士のひとこと">よける</span>
+              <span class="nav-name" data-param="COURSE" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic" data-en="Dodge">よける</span>
               <button data-nav="left" title="Q">◀</button>
               <output id="course"></output>
               <button data-nav="right" title="E">▶</button>
             </div>
           </div>
           <div class="nav">
-            <button class="switch" id="carbheat" data-nav="carb" title="H"><span class="knob"></span><span>キャブヒート<small id="carb-note">H</small></span></button>
-            <button class="navbtn" id="radio" data-nav="radio" title="P"><span>気象ラジオ<small id="radio-note">P</small></span></button>
-            <button class="navbtn warn" id="turnback" data-nav="turn" title="U"><span>引き返す<small>U</small></span></button>
+            <button class="switch" id="carbheat" data-nav="carb" title="H"><span class="knob"></span><span data-en="Carb heat">キャブヒート<small id="carb-note">H</small></span></button>
+            <button class="navbtn" id="radio" data-nav="radio" title="P"><span data-en="Weather radio">気象ラジオ<small id="radio-note">P</small></span></button>
+            <button class="navbtn warn" id="turnback" data-nav="turn" title="U"><span data-en="Turn back">引き返す<small>U</small></span></button>
           </div>
 
-          <div class="annunciators" aria-label="警告灯">
-            <span class="lamp red" id="lamp-rough">エンジン荒れ</span>
-            <span class="lamp amber" id="lamp-fuel">燃料少</span>
-            <span class="lamp red" id="lamp-rpm">回転超過</span>
-            <span class="lamp amber" id="lamp-vib" data-param="B3" title="クリックで整備士のひとこと">振動</span>
-            <span class="lamp amber" id="lamp-bolt" data-param="B1" title="クリックで整備士のひとこと" hidden>ボルト点検</span>
-            <span class="lamp amber" id="lamp-carb" data-param="C3" title="クリックで整備士のひとこと" hidden>キャブ凍結</span>
+          <div class="annunciators" aria-label="警告灯" data-en-label="Warning lights">
+            <span class="lamp red" id="lamp-rough" data-en="Rough engine">エンジン荒れ</span>
+            <span class="lamp amber" id="lamp-fuel" data-en="Low fuel">燃料少</span>
+            <span class="lamp red" id="lamp-rpm" data-en="Overspeed">回転超過</span>
+            <span class="lamp amber" id="lamp-vib" data-param="B3" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic" data-en="Vibration">振動</span>
+            <span class="lamp amber" id="lamp-bolt" data-param="B1" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic" data-en="Check bolts" hidden>ボルト点検</span>
+            <span class="lamp amber" id="lamp-carb" data-param="C3" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic" data-en="Carb ice" hidden>キャブ凍結</span>
           </div>
 
-          <div class="pilot" aria-label="操縦者">
-            <div class="pmeter" id="pilot-fatigue"><span class="pm-name" data-param="E1" title="クリックで整備士のひとこと">疲労</span><span class="st-bar"><i></i></span><span class="pm-word"></span></div>
-            <div class="pmeter" id="pilot-haste"><span class="pm-name" data-param="E2" title="クリックで整備士のひとこと">焦り</span><span class="st-bar"><i></i></span><span class="pm-word"></span></div>
+          <div class="pilot" aria-label="操縦者" data-en-label="Pilot">
+            <div class="pmeter" id="pilot-fatigue"><span class="pm-name" data-param="E1" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic" data-en="Fatigue">疲労</span><span class="st-bar"><i></i></span><span class="pm-word"></span></div>
+            <div class="pmeter" id="pilot-haste"><span class="pm-name" data-param="E2" title="クリックで整備士のひとこと" data-en-title="Click for a word from the mechanic" data-en="Haste">焦り</span><span class="st-bar"><i></i></span><span class="pm-word"></span></div>
           </div>
         </div>
       </section>
