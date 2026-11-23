@@ -40,6 +40,7 @@ import {
 import { createRng } from "./model/physics";
 import type { Setup, World } from "./model/types";
 import { showCourseSelect } from "./ui/courseSelect";
+import { showTitle } from "./ui/titleScreen";
 import { closeDialog, fmtDuration, mechanicLine, openDialog, setActions } from "./ui/dialog";
 import { inspectionHtml } from "./ui/inspection";
 import { showHangar } from "./ui/hangar";
@@ -406,8 +407,9 @@ function toast(lines: string[]) {
   toastTimer = window.setTimeout(() => (el.hidden = true), 6000);
 }
 
-// ---- 流れ：コース → 格納庫 → 区間 → 経由地 → … → 目的地 ----
-function chooseCourse() {
+// ---- 流れ：タイトル → コース → 格納庫 → 区間 → 経由地 → … → 目的地 ----
+/** 旅を片づけて、後ろの景色で機体をひとりでに飛ばす（タイトルとコース選び） */
+function startAttract() {
   running = false;
   campaign = null;
   clearTutorialView();
@@ -416,12 +418,23 @@ function chooseCourse() {
   // 後ろの景色：選んでいるコースの最初の区間を、機体がひとりでに飛んでいく
   flight = previewFlight();
   attract = true;
+}
+
+function goTitle() {
+  startAttract();
+  closeDialog();
+  showTitle(chooseCourse);
+}
+
+function chooseCourse() {
+  if (!attract) startAttract();
   showCourseSelect({
     onChoose: (w) => {
       selectWorld(w);
       goHangar();
     },
     onQuick: quickStart,
+    onTitle: goTitle,
     current: world.id,
     progress,
   });
@@ -429,6 +442,7 @@ function chooseCourse() {
 
 function selectWorld(w: World) {
   world = w;
+  savedCourse = w.id;
   try {
     localStorage.setItem(COURSE_KEY, w.id);
   } catch {
@@ -683,5 +697,5 @@ function frame(now: number) {
   requestAnimationFrame(frame);
 }
 
-chooseCourse();
+goTitle();
 requestAnimationFrame(frame);

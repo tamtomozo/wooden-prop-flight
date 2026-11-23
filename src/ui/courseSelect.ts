@@ -20,12 +20,14 @@ export interface CourseSelectOptions {
   onChoose: (w: World) => void;
   /** 整備士のおすすめセッティングで、格納庫を飛ばしてすぐ飛ぶ */
   onQuick: (w: World) => void;
+  /** タイトル画面へ戻る */
+  onTitle: () => void;
   current?: string;
   /** 自己ベストと実績 */
   progress: Progress;
 }
 
-export function showCourseSelect({ onChoose, onQuick, current, progress }: CourseSelectOptions) {
+export function showCourseSelect({ onChoose, onQuick, onTitle, current, progress }: CourseSelectOptions) {
   const cards = COURSES.map((w) => {
     const path = shortestPath(w, w.startId, w.goalId);
     const lo = minSeaKm(w);
@@ -56,7 +58,7 @@ export function showCourseSelect({ onChoose, onQuick, current, progress }: Cours
   }).join("");
 
   openDialog(
-    `<h2>コースを選ぶ</h2>
+    `<div class="dialog-head"><h2>コースを選ぶ</h2><button class="back" data-act="title">タイトルへ</button></div>
     <p class="lead">陸の道では行けない、海の向こう・山の向こうへ。木のプロペラ機で、海峡・諸島・山脈・大洋を飛びこえる。はじめての人は、チュートリアル（海ルート・山ルート）から。</p>
     ${mechanicLine("海の上では、エンジンが止まったら降りる畑はない。山の上では、空気が薄くて上がらない。燃料と天気と、引き返す勇気がすべてだ。")}
     <div class="course-list">${cards}</div>
@@ -67,6 +69,7 @@ export function showCourseSelect({ onChoose, onQuick, current, progress }: Cours
   setActions({
     course: (el) => onChoose(pick(el)),
     quick: (el) => onQuick(pick(el)),
+    title: onTitle,
   });
 }
 

@@ -1,0 +1,64 @@
+// タイトル画面：後ろで機体がひとりでに飛ぶ景色の上に題名を出し、画面の下に「Enter かスペースではじめる」を出す。
+// 計器盤や上の帯は隠して、景色を画面いっぱいに見せる。画面のどこを押しても（Enter／スペースでも）はじまる。
+
+const app = document.querySelector<HTMLElement>("#app")!;
+const title = document.querySelector<HTMLElement>("#title")!;
+
+/** 木のプロペラ（まん中の赤いスピナーのまわりを回る） */
+const PROP_SVG = `<svg class="title-prop" viewBox="-50 -50 100 100" aria-hidden="true">
+  <defs>
+    <linearGradient id="title-wood" x1="0" x2="1">
+      <stop offset="0" stop-color="#7a4a22" /><stop offset="0.5" stop-color="#c58b52" /><stop offset="1" stop-color="#7a4a22" />
+    </linearGradient>
+  </defs>
+  <g class="blades">
+    <path d="M -5 -4 C -6 -20 -7 -38 -1 -47 C 6 -38 6 -20 5 -4 Z" fill="url(#title-wood)" />
+    <path d="M -5 4 C -6 20 -7 38 -1 47 C 6 38 6 20 5 4 Z" fill="url(#title-wood)" />
+  </g>
+  <circle r="8" fill="#c9433a" /><circle r="3" cx="-2" cy="-2" fill="#e8806f" />
+</svg>`;
+
+let onKey: ((e: KeyboardEvent) => void) | null = null;
+let onClick: (() => void) | null = null;
+
+/** タイトルを出す。onStart：コース選びへ */
+export function showTitle(onStart: () => void) {
+  title.innerHTML = `<div class="title-inner">
+    ${PROP_SVG}
+    <p class="title-kicker">海の向こう・山の向こうへ</p>
+    <h1>木製プロペラ<br />長距離飛行</h1>
+    <p class="title-lead">木のプロペラ機で、海峡・諸島・山脈・大洋を飛びこえる。<br />燃料と天気と、引き返す勇気がすべて。</p>
+  </div>
+  <p class="title-start">Enter かスペースではじめる</p>`;
+
+  const leave = () => {
+    hideTitle();
+    onStart();
+  };
+  removeListeners();
+  onKey = (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    leave();
+  };
+  onClick = leave;
+  window.addEventListener("keydown", onKey);
+  title.addEventListener("click", onClick);
+
+  app.classList.add("title-mode");
+  title.hidden = false;
+}
+
+function removeListeners() {
+  if (onKey) window.removeEventListener("keydown", onKey);
+  if (onClick) title.removeEventListener("click", onClick);
+  onKey = null;
+  onClick = null;
+}
+
+export function hideTitle() {
+  removeListeners();
+  app.classList.remove("title-mode");
+  title.hidden = true;
+  title.innerHTML = "";
+}
