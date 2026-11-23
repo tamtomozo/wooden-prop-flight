@@ -37,10 +37,20 @@ export const BLUE = "#5aa9ef";
 
 const FULL_SWEEP: [number, number] = [Math.PI * 0.75, Math.PI * 2.25];
 // 文字盤の下半分に並べる文字の高さ（中心からの距離 ÷ 半径）
-const TITLE_Y = 0.27;
-const UNIT_Y = 0.42;
-const READOUT_Y = 0.6;
-const FLAG_Y = 0.8;
+const TITLE_Y = 0.23;
+const UNIT_Y = 0.4;
+const READOUT_Y = 0.61;
+const FLAG_Y = 0.82;
+// 文字の高さ（÷ 文字盤の半径）。小さな計器でも読めるように、なるべく大きく
+const NUMBER_FONT = 0.23;
+const TITLE_FONT = 0.2;
+const UNIT_FONT = 0.15;
+const READOUT_FONT = 0.21;
+const FLAG_FONT = 0.18;
+/** 目盛りの数字を置く半径（÷ 文字盤の半径） */
+const NUMBER_R = 0.64;
+/** 文字盤の半径（÷ 計器の大きさ）。draw でも同じ値を使う */
+const DIAL_R = 0.43;
 
 export class RoundGauge {
   private face = document.createElement("canvas");
@@ -89,8 +99,8 @@ export class RoundGauge {
     const g = this.face.getContext("2d")!;
     const s = this.size;
     const c = s / 2;
-    const R = s * 0.46; // ベゼルの外側
-    const r = s * 0.4; // 文字盤
+    const R = s * 0.49; // ベゼルの外側
+    const r = s * DIAL_R; // 文字盤
     const sp = this.spec;
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     g.clearRect(0, 0, s, s);
@@ -148,7 +158,7 @@ export class RoundGauge {
     g.fillStyle = "#ecebe6";
     g.textAlign = "center";
     g.textBaseline = "middle";
-    g.font = `600 ${Math.round(r * 0.17)}px system-ui, sans-serif`;
+    g.font = `700 ${Math.round(r * NUMBER_FONT)}px system-ui, sans-serif`;
     const steps = Math.round((sp.max - sp.min) / sp.minor);
     for (let i = 0; i <= steps; i++) {
       const v = sp.min + i * sp.minor;
@@ -162,17 +172,17 @@ export class RoundGauge {
       g.stroke();
       if (isMajor) {
         const text = sp.label ? sp.label(v) : String(v);
-        if (text) g.fillText(text, c + Math.cos(a) * r * 0.66, c + Math.sin(a) * r * 0.66);
+        if (text) g.fillText(text, c + Math.cos(a) * r * NUMBER_R, c + Math.sin(a) * r * NUMBER_R);
       }
     }
 
     // 計器の名前と単位（文字盤の下半分。上半分は目盛りと針の場所）
     g.fillStyle = "#c9c6bd";
-    g.font = `600 ${Math.round(r * 0.15)}px system-ui, sans-serif`;
+    g.font = `700 ${Math.round(r * TITLE_FONT)}px system-ui, sans-serif`;
     g.fillText(sp.title, c, c + r * TITLE_Y);
     if (sp.unit) {
-      g.fillStyle = "#8d9096";
-      g.font = `${Math.round(r * 0.12)}px system-ui, sans-serif`;
+      g.fillStyle = "#a3a6ab";
+      g.font = `600 ${Math.round(r * UNIT_FONT)}px system-ui, sans-serif`;
       g.fillText(sp.unit, c, c + r * UNIT_Y);
     }
 
@@ -196,7 +206,7 @@ export class RoundGauge {
     const g = this.ctx;
     const s = this.size;
     const c = s / 2;
-    const r = s * 0.4;
+    const r = s * DIAL_R;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, this.canvas.width, this.canvas.height);
     g.drawImage(this.face, 0, 0);
@@ -205,19 +215,19 @@ export class RoundGauge {
     g.textAlign = "center";
     g.textBaseline = "middle";
     if (extras.flag) {
-      const w = r * 0.95;
-      const h = r * 0.24;
+      const w = r * 0.82;
+      const h = r * 0.25;
       g.fillStyle = "#050607";
       g.beginPath();
       g.roundRect(c - w / 2, c + r * FLAG_Y - h / 2, w, h, h * 0.25);
       g.fill();
       g.fillStyle = extras.flag.color;
-      g.font = `700 ${Math.round(r * 0.15)}px system-ui, sans-serif`;
+      g.font = `700 ${Math.round(r * FLAG_FONT)}px system-ui, sans-serif`;
       g.fillText(extras.flag.text, c, c + r * FLAG_Y + r * 0.005);
     }
     if (extras.readout) {
       g.fillStyle = "#e8a35c";
-      g.font = `700 ${Math.round(r * 0.16)}px ui-monospace, monospace`;
+      g.font = `700 ${Math.round(r * READOUT_FONT)}px ui-monospace, monospace`;
       g.fillText(extras.readout, c, c + r * READOUT_Y);
     }
 

@@ -1081,6 +1081,7 @@ export const SHIROGANE: World = {
 };
 
 /** 最初に選べるコース（並び順のまま画面に出す） */
-export const COURSES: World[] = [KAMOME, TSURANARI, OWADATSUMI, SHIROGANE, WORLD];
+/** コース選びに並べる順。やさしいものから（練習 → ★ → ★★ → ★★★） */
+export const COURSES: World[] = [WORLD, KAMOME, TSURANARI, SHIROGANE, OWADATSUMI];
 
-export const courseById = (id: string): World => COURSES.find((c) => c.id === id) ?? COURSES[0];
+export const courseById = (id: string): World => COURSES.find((c) => c.id === id) ?? KAMOME;

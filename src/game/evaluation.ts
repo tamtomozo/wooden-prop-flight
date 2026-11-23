@@ -30,6 +30,26 @@ const fmtClock = (min: number) => `${Math.floor(min / 60)}:${String(Math.round(m
 /** かかった日数ごとの点（1日で着けば満点。泊まるほど下がる） */
 const DAY_POINTS = [25, 18, 10];
 
+/** ランクの境目（この点以上） */
+export const RANK_FROM = { S: 85, A: 70, B: 50 } as const;
+
+/** 評価の4項目（各25点）。格納庫で、旅の前に見せる */
+export const SCORE_GUIDE: { label: string; max: number; how: string }[] = [
+  { label: "日数", max: 25, how: `1日で着けば満点（2日 ${DAY_POINTS[1]}・3日 ${DAY_POINTS[2]}）` },
+  { label: "燃費", max: 25, how: "1 L の燃料で何 km 飛んだか" },
+  { label: "機体の状態", max: 25, how: "着いたときの機体の傷み" },
+  { label: "安全な判断", max: 25, how: "予備燃料を守る・引き返す／待つ・整備" },
+];
+export const RISK_GUIDE = "雲の中・積乱雲の近く・回転超過・乱気流で速すぎ・予備燃料を割った着陸は減点";
+
+/** 1章の「4つの学び」。最後にふり返る */
+export const LESSON_TITLES = [
+  "プロペラは一つですべてに最適にはならない",
+  "木は湿気で変わる",
+  "遠くへ飛ぶ鍵は速さより燃費と風",
+  "一番大事なのは引き返す勇気",
+] as const;
+
 export function evaluateTrip(c: CampaignState): TripEvaluation {
   const s = c.safety;
   const a = c.condition;
@@ -80,13 +100,13 @@ export function evaluateTrip(c: CampaignState): TripEvaluation {
     { label: "危ない飛び方", detail: riskParts.length ? riskParts.join("・") : "なし", points: riskPoints, max: 0 },
   ];
   const total = clamp(lines.reduce((x, l) => x + l.points, 0), 0, 100);
-  const rank = total >= 85 ? "S" : total >= 70 ? "A" : total >= 50 ? "B" : "C";
+  const rank = total >= RANK_FROM.S ? "S" : total >= RANK_FROM.A ? "A" : total >= RANK_FROM.B ? "B" : "C";
   const title = { S: "名パイロット", A: "腕のいいパイロット", B: "一人前のパイロット", C: "見習いパイロット" }[rank];
 
   // 4つの学び（1章）をふり返る
   const lessons: Lesson[] = [
     {
-      title: "プロペラは一つですべてに最適にはならない",
+      title: LESSON_TITLES[0],
       ok: s.overspeedMinutes < 1,
       text:
         s.overspeedMinutes < 1
@@ -94,7 +114,7 @@ export function evaluateTrip(c: CampaignState): TripEvaluation {
           : `回転超過が ${Math.round(s.overspeedMinutes)} 分あった。上昇型は回りやすい。全開や降下では回転計を見て絞ろう。`,
     },
     {
-      title: "木は湿気で変わる",
+      title: LESSON_TITLES[1],
       ok: s.minBolt >= BOLT_DANGER + 20,
       text:
         s.minBolt >= BOLT_DANGER + 20
@@ -102,7 +122,7 @@ export function evaluateTrip(c: CampaignState): TripEvaluation {
           : `ボルトが ${Math.round(s.minBolt)} までゆるんだ。気候の違う土地に着いたら、まず締め直そう。`,
     },
     {
-      title: "遠くへ飛ぶ鍵は速さより燃費と風",
+      title: LESSON_TITLES[2],
       ok: kmPerL >= 6,
       text:
         kmPerL >= 6
@@ -110,7 +130,7 @@ export function evaluateTrip(c: CampaignState): TripEvaluation {
           : `1 L で ${kmPerL.toFixed(1)} km。排気温度計で最良燃費を探し、風の弱い（追い風の）高度を選ぼう。`,
     },
     {
-      title: "一番大事なのは引き返す勇気",
+      title: LESSON_TITLES[3],
       ok: s.cloudMinutes + s.cbMinutes < 1 && s.hastyMinutes < 30,
       text:
         s.hastyMinutes > 0

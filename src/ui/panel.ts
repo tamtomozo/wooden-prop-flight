@@ -104,20 +104,7 @@ export class CockpitPanel {
       major: 100,
       minor: 25,
     });
-    this.fuel = new RoundGauge(canvas("#g-fuel"), {
-      title: "燃料",
-      min: 0,
-      max: cap,
-      sweep: halfSweep,
-      major: cap / 2,
-      minor: cap / 8,
-      label: (v) => (v === 0 ? "E" : v === cap ? "F" : "½"),
-      arcs: [
-        { from: 0, to: cap * FUEL_LOW, color: RED },
-        { from: cap * FUEL_LOW, to: cap * FUEL_HALF, color: YELLOW },
-        { from: cap * FUEL_HALF, to: cap, color: GREEN },
-      ],
-    });
+    this.fuel = this.makeFuelGauge(cap);
     this.engine = new RoundGauge(canvas("#g-engine"), {
       title: "エンジン",
       unit: "調子",
@@ -132,6 +119,33 @@ export class CockpitPanel {
         { from: 60, to: 100, color: GREEN },
       ],
     });
+  }
+
+  /** 燃料計（容量で目盛りが変わる） */
+  private makeFuelGauge(cap: number): RoundGauge {
+    const halfSweep: [number, number] = [Math.PI * 1.2, Math.PI * 1.8];
+    return new RoundGauge(document.querySelector<HTMLCanvasElement>("#g-fuel")!, {
+      title: "燃料",
+      min: 0,
+      max: cap,
+      sweep: halfSweep,
+      major: cap / 2,
+      minor: cap / 8,
+      label: (v) => (v === 0 ? "E" : v === cap ? "F" : "½"),
+      arcs: [
+        { from: 0, to: cap * FUEL_LOW, color: RED },
+        { from: cap * FUEL_LOW, to: cap * FUEL_HALF, color: YELLOW },
+        { from: cap * FUEL_HALF, to: cap, color: GREEN },
+      ],
+    });
+  }
+
+  /** 増設タンクを積んだときなど、燃料の容量が変わったら目盛りを描き直す */
+  setFuelCapacity(cap: number) {
+    if (cap === this.fuelCapacityL) return;
+    this.fuelCapacityL = cap;
+    this.fuel = this.makeFuelGauge(cap);
+    this.fuel.setPlain(this.rule.plainInstruments);
   }
 
   /** 難易度に合わせる（リアルは計器も数値だけ） */
@@ -265,11 +279,12 @@ export class CockpitPanel {
     // ---- 操縦者 ----
     this.pilotMeter("pilot-fatigue", s.pilot.fatigue, ["元気", "疲れてきた", "くたくた"], d);
     this.pilotMeter("pilot-haste", s.pilot.haste, ["落ち着いている", "焦っている", "かなり焦っている"], d);
-    // クリックした計器のひとことを優先して出す
+    // クリックした計器のひとことを優先して出す。着陸の降下に入ったら、整備士のひとことは出さない
+    // （着く先の景色を見せる。計器をクリックしたときだけは出す）
     const pin = this.pinned && performance.now() < this.pinned.until ? this.pinned : null;
     $("#advice").textContent = pin
       ? `【${PARAM_LINES[pin.id].name}】${paramLine(pin.id, s.pilot.haste)}`
-      : flying
+      : flying && !s.approach
         ? mechanicAdvice(s)
         : "";
     this.root.classList.toggle("shake", shake > 0.3);

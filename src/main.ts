@@ -17,6 +17,10 @@ import {
   type CampaignState,
 } from "./game/campaign";
 import { evaluateTrip } from "./game/evaluation";
+import { autopilot } from "./game/planner";
+import { recommendSetup } from "./game/recommend";
+import { showAchievementPopups } from "./ui/achievementPopup";
+import { courseLabel, nextStep, parseProgress, recordTrip, type Progress } from "./game/records";
 import {
   canReturn,
   clockMin,
@@ -55,6 +59,22 @@ try {
 } catch {
   /* 読めなければ最初のコース */
 }
+// ---- 旅をまたいで残る記録（自己ベスト・実績）。保存できなくても遊べる ----
+const PROGRESS_KEY = "plane.progress";
+let progress: Progress = parseProgress(null);
+try {
+  progress = parseProgress(localStorage.getItem(PROGRESS_KEY));
+} catch {
+  /* 読めなければ空の記録 */
+}
+function saveProgress() {
+  try {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+  } catch {
+    /* 保存できなくても遊べる */
+  }
+}
+
 /** 選んでいるコース（旅の舞台） */
 let world: World = courseById(savedCourse ?? "");
 let campaign: CampaignState | null = null;
@@ -62,6 +82,8 @@ let campaign: CampaignState | null = null;
 let legStart: CampaignState | null = null;
 let flight: FlightState = previewFlight();
 let running = false;
+/** コース選びの後ろで、機体をひとりでに飛ばして見せている */
+let attract = false;
 let paused = false;
 let speed = 1;
 let showDetails = false;
@@ -328,19 +350,49 @@ function chooseCourse() {
   running = false;
   campaign = null;
   legStart = null;
-  showCourseSelect((w) => {
-    world = w;
-    try {
-      localStorage.setItem(COURSE_KEY, w.id);
-    } catch {
-      /* 保存できなくても遊べる */
-    }
-    goHangar();
-  }, world.id);
+  // 後ろの景色：選んでいるコースの最初の区間を、機体がひとりでに飛んでいく
+  flight = previewFlight();
+  attract = true;
+  showCourseSelect({
+    onChoose: (w) => {
+      selectWorld(w);
+      goHangar();
+    },
+    onQuick: quickStart,
+    current: world.id,
+    progress,
+  });
+}
+
+function selectWorld(w: World) {
+  world = w;
+  try {
+    localStorage.setItem(COURSE_KEY, w.id);
+  } catch {
+    /* 保存できなくても遊べる */
+  }
+}
+
+/** 格納庫を飛ばして、整備士のおすすめセッティング（ふつう）ですぐ出発する */
+function quickStart(w: World) {
+  selectWorld(w);
+  attract = false;
+  $("#sunset").textContent = fmtClock(world.sunsetMin);
+  const destination = suggestedDestination(world, world.startId);
+  const rec = recommendSetup(world, destination, "normal");
+  const setup: Setup = { pitch: rec.pitch, fuelPercent: rec.fuelPercent, torqueResult: "ok", equipment: rec.equipment };
+  campaign = startCampaign(world, setup, Date.now(), "normal", destination);
+  cockpit.setDifficulty("normal");
+  cockpit.setFuelCapacity(world.fuelCapacityL);
+  departLeg([
+    "整備士のおすすめセッティングで出発。ボルトは整備士が締めておいた（経由地からは自分で締める）",
+    "W / S でスロットル、A / D でミクスチャー。スペースで一時停止",
+  ]);
 }
 
 function goHangar() {
   running = false;
+  attract = false;
   campaign = null;
   legStart = null;
   flight = previewFlight();
@@ -348,19 +400,23 @@ function goHangar() {
   applyControls(75, 0, true);
   // 格納庫で見せる予報と、出発してからの天気を同じにするため、旅の乱数の種はここで決める
   const seed = Date.now();
-  showHangar(
+  cockpit.setFuelCapacity(world.fuelCapacityL);
+  showHangar({
     world,
     seed,
-    (setup, difficulty, destination) => {
-      campaign = startCampaign(world, setup, seed, difficulty, destination);
+    progress,
+    // 増設タンクを積んだときは、タンクの大きい舞台（w）で旅をする
+    onDepart: (setup, difficulty, destination, w) => {
+      campaign = startCampaign(w, setup, seed, difficulty, destination);
       cockpit.setDifficulty(difficulty);
+      cockpit.setFuelCapacity(w.fuelCapacityL);
       departLeg();
     },
-    chooseCourse,
-  );
+    onChangeCourse: chooseCourse,
+  });
 }
 
-function departLeg() {
+function departLeg(extraNotes: string[] = []) {
   const c = campaign!;
   legStart = snapshot(c);
   const { flight: f, notes } = beginLeg(c);
@@ -371,7 +427,7 @@ function departLeg() {
   running = true;
   setPaused(false);
   lastEnv = { inCloud: false, rain: 0, turbulence: 0, ice: false };
-  toast([`${f.leg.from.name}を離陸。目標高度 ${f.controls.targetAltitude} m まで上昇する`, ...notes]);
+  toast([`${f.leg.from.name}を離陸。目標高度 ${f.controls.targetAltitude} m まで上昇する`, ...extraNotes, ...notes]);
 }
 
 function onFlightEnded() {
@@ -455,6 +511,11 @@ function showFinal() {
   const path = [world.startId, ...flown.map((r) => r.leg.to.id)].map((id) => field(world, id).name.replace("飛行場", ""));
   const ev = evaluateTrip(c);
   const seaFlown = flown.reduce((s, r) => s + seaKm(r.leg), 0);
+  // 記録に残す（自己ベスト・実績）
+  const rec = recordTrip(progress, c, ev);
+  progress = rec.progress;
+  saveProgress();
+  const next = nextStep(world, ev, progress);
   openDialog(
     `<h2 class="ok">${dest.name}に到着！</h2>
     <p><b>${world.title}</b>：${path.join(" → ")}、${flown.length}区間・${flown.reduce((s, r) => s + r.leg.distanceKm, 0)} km の旅を終えた。${
@@ -472,7 +533,19 @@ function showFinal() {
         )
         .join("")}
     </table>
+    ${
+      rec.newBest
+        ? `<p class="new-best">${rec.previousBest ? `自己ベスト更新！（これまでは ${rec.previousBest.rank}・${rec.previousBest.total} 点）` : "このコースをはじめて渡りきった！"}</p>`
+        : `<p class="small">このコースの自己ベストは ${progress.best[world.id].rank}・${progress.best[world.id].total} 点。</p>`
+    }
     ${mechanicLine(ev.comment)}
+    ${
+      rec.newAchievements.length
+        ? `<div class="new-achievements"><h3>新しい実績</h3><ul>${rec.newAchievements
+            .map((a) => `<li><b>${a.title}</b><small>${a.text}</small>${a.reward ? `<span class="reward">${a.reward}</span>` : ""}</li>`)
+            .join("")}</ul></div>`
+        : ""
+    }
 
     <h3>4つの学び</h3>
     <ul class="lessons">${ev.lessons
@@ -490,13 +563,31 @@ function showFinal() {
     ${inspectionHtml(c.condition, { details: showDetails, plain: DIFFICULTY[c.difficulty].plainInstruments })}
     <ul>${c.events.map((e) => `<li>${e}</li>`).join("")}</ul>
     ${mechanicLine("おつかれさん。帰ったら、トルク・傷・バランスを点検しておこう。")}
-    <div class="buttons-row">
-      <button data-act="courses">別のコースを選ぶ</button>
-      <button class="primary" data-act="again">格納庫からもう一度</button>
+    <div class="next-step">
+      <h3>次の旅</h3>
+      ${mechanicLine(next.advice)}
+      <div class="buttons-row">
+        <button data-act="courses">別のコースを選ぶ</button>
+        <button class="${next.course ? "" : "primary"}" data-act="again">このコースをもう一度</button>
+        ${
+          next.course
+            ? `<button class="primary" data-act="next">次は ${courseLabel(next.course)} へ<small>${next.courseReason}</small></button>`
+            : ""
+        }
+      </div>
     </div>`,
     { wide: true },
   );
-  setActions({ again: goHangar, courses: chooseCourse });
+  // 手に入れた実績は、画面のまん中に1つずつ知らせる（一覧は評価の下にも残す）
+  showAchievementPopups(rec.newAchievements, () => sound.chime());
+  setActions({
+    again: goHangar,
+    courses: chooseCourse,
+    next: () => {
+      selectWorld(next.course!);
+      goHangar();
+    },
+  });
 }
 
 // ---- ループ ----
@@ -509,10 +600,15 @@ function frame(now: number) {
     stepFlight(flight, realDt * GAME_MINUTES_PER_SECOND * speed);
     watchFlight();
     if (flight.status !== "flying") onFlightEnded();
+  } else if (attract) {
+    // コース選びの後ろの景色：速めに飛ばし、区間が終わったら滑走路からやり直す
+    autopilot(flight, 0.7);
+    stepFlight(flight, realDt * GAME_MINUTES_PER_SECOND * 3);
+    if (flight.status !== "flying") flight = previewFlight();
   }
   updateHud();
   sound.update(flight, active);
-  backScene?.draw(flight, realDt, active);
+  backScene?.draw(flight, realDt, active || attract);
   routeBar.draw(flight);
   requestAnimationFrame(frame);
 }

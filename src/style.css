@@ -361,6 +361,8 @@ button { font: inherit; }
   z-index: 10;
 }
 .overlay[hidden] { display: none; }
+/* コース選び：後ろで飛んでいる機体が見えるように、まわりを薄く暗くする */
+.overlay.see-through { background: rgba(10, 12, 15, 0.38); }
 .dialog {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -676,6 +678,14 @@ button { font: inherit; }
 .dialog table.score td small { display: block; }
 .dialog table.score td:last-child { font-weight: 700; white-space: nowrap; }
 .dialog table.score tr.minus td:last-child { color: var(--red); }
+.new-best { color: #f2c94c; font-weight: 700; }
+.new-achievements ul { list-style: none; padding: 0; display: grid; gap: 6px; }
+.new-achievements li { background: #2e2a1a; border-left: 4px solid #f2c94c; border-radius: 6px; padding: 6px 12px; display: flex; flex-direction: column; line-height: 1.6; }
+.new-achievements .reward { color: #ffe08a; font-size: 0.85rem; margin-top: 2px; }
+.next-step { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 4px; }
+.dialog .next-step .buttons-row .primary { margin-top: 0; width: auto; }
+.dialog .next-step [data-act="next"] { flex: 2 1 300px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.dialog .next-step [data-act="next"] small { color: #1b1f24; font-weight: 400; }
 .lessons { list-style: none; padding: 0; display: grid; gap: 6px; }
 .lessons li { background: #1f2329; border-left: 4px solid var(--yellow); border-radius: 6px; padding: 6px 12px; font-size: 0.88rem; line-height: 1.6; }
 .lessons li.ok { border-left-color: var(--green); }
@@ -828,7 +838,45 @@ button { font: inherit; }
 
 /* ---- コース選び ---- */
 .course-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 10px; }
-.course-card { display: flex; flex-direction: column; align-items: stretch; text-align: left; padding: 10px; gap: 8px; }
+.course-card { display: flex; flex-direction: column; align-items: stretch; text-align: left; padding: 10px; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+/* 土地の人のうわさ */
+.rumors { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.dialog .rumors .rumor { margin: 0; background: #1d2630; border-left: 3px solid #6f8fae; }
+.rumor .who { background: #6f8fae; }
+.dialog .rumor small { display: block; color: #8fa6bd; font-size: 0.72rem; }
+/* 格納庫：評価の項目と4つの学び（旅の前に見せる） */
+.goals { background: #1f2329; border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
+.dialog .goals p { margin: 4px 0; }
+.dialog .goals-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 0; }
+.goals-head .rank-S { color: #f2c94c; }
+.goals-head .rank-A { color: var(--green); }
+.goals-head .rank-B { color: var(--blue); }
+.goal-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0; }
+.goal { background: var(--card); border-radius: 6px; padding: 5px 8px; display: flex; flex-direction: column; line-height: 1.4; }
+.goal b { font-size: 0.9rem; }
+.dialog .goal small { font-size: 0.75rem; }
+.lessons-preview { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
+.lessons-preview small { width: 100%; }
+.lessons-preview span { font-size: 0.78rem; background: var(--card); border-left: 3px solid var(--green); border-radius: 4px; padding: 2px 8px; }
+@media (max-width: 620px) {
+  .goal-list { grid-template-columns: repeat(2, 1fr); }
+}
+.course-best { font-size: 0.82rem; color: #cfd3d8; }
+.course-best.none { color: var(--muted); }
+.course-best b { font-size: 1rem; }
+.course-best .rank-S, .achievements .rank-S { color: #f2c94c; }
+.course-best .rank-A { color: var(--green); }
+.course-best .rank-B { color: var(--blue); }
+.course-best .rank-C { color: var(--muted); }
+.achievements ul { list-style: none; padding: 0; margin: 8px 0 4px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; }
+.achievements li { background: var(--card); border-left: 4px solid var(--line); border-radius: 6px; padding: 5px 10px; display: flex; flex-direction: column; line-height: 1.5; }
+.achievements li.got { border-left-color: #f2c94c; }
+.achievements li b { font-size: 0.9rem; }
+.course-go { display: flex; gap: 6px; margin-top: auto; }
+.dialog .course-go button { flex: 1 1 0; padding: 6px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-weight: 700; }
+.dialog .course-go button small { font-weight: 400; font-size: 0.72rem; }
+.dialog .course-go .quick { background: var(--accent); color: #1b1f24; border-color: var(--accent); }
+.dialog .course-go .quick small { color: #1b1f24; }
 .course-card.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(232, 163, 92, 0.4); }
 .course-card.practice { opacity: 0.85; }
 .course-card .worldmap.mini { height: 190px; max-height: 190px; pointer-events: none; }
@@ -874,3 +922,41 @@ button { font: inherit; }
 .issues li.red { border-left-color: var(--red); }
 .issues li span { color: var(--muted); font-size: 0.8rem; }
 .issues-none { margin: 6px 0 0; }
+
+/* 実績を獲得したときの知らせ（画面のまん中に、ダイアログより手前に） */
+.achv-pop-host {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(10, 12, 15, 0.45);
+  cursor: pointer;
+  animation: achv-fade 0.25s ease-out;
+}
+.achv-pop-host.leaving { opacity: 0; transition: opacity 0.3s; }
+.achv-pop {
+  width: min(360px, 100%);
+  background: linear-gradient(180deg, #3a3216, #241f10);
+  border: 2px solid #f2c94c;
+  border-radius: 14px;
+  box-shadow: 0 0 0 4px rgba(242, 201, 76, 0.18), 0 12px 40px rgba(0, 0, 0, 0.6);
+  padding: 18px 20px 12px;
+  text-align: center;
+  color: #fff8e0;
+  animation: achv-pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.achv-medal { width: 56px; height: 66px; display: block; margin: 0 auto 4px; animation: achv-swing 1.2s ease-in-out 0.3s; transform-origin: 50% 0; }
+.achv-head { color: #f2c94c; font-weight: 700; letter-spacing: 0.1em; font-size: 0.9rem; }
+.achv-head small { margin-left: 8px; color: #c9b67a; font-weight: 400; letter-spacing: 0; }
+.achv-title { display: block; font-size: 1.35rem; margin: 4px 0 6px; }
+.achv-pop p { margin: 4px 0; font-size: 0.92rem; line-height: 1.6; }
+.achv-pop .achv-reward { color: #ffe08a; background: rgba(0, 0, 0, 0.25); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; }
+.achv-tap { display: block; margin-top: 8px; color: #a99a6a; font-size: 0.75rem; }
+@keyframes achv-fade { from { opacity: 0; } }
+@keyframes achv-pop { from { transform: scale(0.6); opacity: 0; } }
+@keyframes achv-swing { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-10deg); } 65% { transform: rotate(6deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .achv-pop-host, .achv-pop, .achv-medal { animation: none; }
+}

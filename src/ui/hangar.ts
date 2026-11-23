@@ -1,11 +1,14 @@
 // 格納庫：出発前のセッティング（A1〜A4）。
 import { DIFFICULTY } from "../data/difficulty";
 import { equipmentKg, NO_EQUIPMENT } from "../data/equipment";
-import { field } from "../data/world";
+import { field, legBetween } from "../data/world";
+import { rumorsFor } from "../game/rumors";
 import { setupProblems, startCampaign, suggestedDestination } from "../game/campaign";
+import { LESSON_TITLES, RANK_FROM, RISK_GUIDE, SCORE_GUIDE } from "../game/evaluation";
 import { recommendSetup, type Recommendation } from "../game/recommend";
+import { bigTankUnlocked, withBigTank, type Progress } from "../game/records";
 import type { Difficulty, Equipment, PitchLevel, Setup, TorqueResult, World } from "../model/types";
-import { mechanicLine, openDialog, setActions, tabsHtml } from "./dialog";
+import { mechanicLine, openDialog, rumorsHtml, setActions, tabsHtml } from "./dialog";
 import { equipmentDiagramHtml } from "./equipmentDiagram";
 import { fuelDiagramHtml } from "./fuelDiagram";
 import { pitchDiagramHtml } from "./pitchDiagram";
@@ -36,19 +39,28 @@ interface HangarState {
   fuelPercent: number;
   equipment: Equipment;
   torque: TorqueResult | null;
+  /** 増設タンクを積むか（使えるようになってから） */
+  bigTank: boolean;
+}
+
+export interface HangarOptions {
+  world: World;
+  /** 出発したあとの旅と同じ乱数の種（天気の予報が決まる） */
+  seed: number;
+  /** world は、増設タンクを積んだときはタンクの大きい舞台 */
+  onDepart: (setup: Setup, difficulty: Difficulty, destination: string, world: World) => void;
+  onChangeCourse: () => void;
+  progress: Progress;
 }
 
 /**
  * seed は、出発したあとの旅と同じものを渡す（天気の予報が決まる）。
  * そうすると、格納庫で見る最初の区間の予報と、実際に飛ぶ日の予報が同じになる。
  */
-export function showHangar(
-  world: World,
-  seed: number,
-  onDepart: (setup: Setup, difficulty: Difficulty, destination: string) => void,
-  onChangeCourse: () => void,
-  initial?: Partial<HangarState>,
-) {
+export function showHangar({ world: baseWorld, seed, onDepart, onChangeCourse, progress }: HangarOptions) {
+  /** 今の機体の舞台（増設タンクを積むと、燃料の容量だけ大きくなる） */
+  let world = baseWorld;
+  const tankOk = bigTankUnlocked(progress);
   const start = field(world, world.startId);
   const goal = field(world, world.goalId);
   const st: HangarState = {
@@ -58,7 +70,7 @@ export function showHangar(
     fuelPercent: 100,
     equipment: { ...NO_EQUIPMENT },
     torque: null,
-    ...initial,
+    bigTank: false,
   };
   /** 最後に「おすすめにする」を押したときの中身（そのままなら説明を見せる） */
   let rec: Recommendation | null = null;
@@ -87,6 +99,8 @@ export function showHangar(
         <button data-act="change-course">コースを選び直す</button>
       </div>
       <p class="lead"><b>${world.title}</b>　${start.name}から${goal.name}への旅。</p>
+      ${rumorsHtml(rumorsFor(legBetween(world, world.startId, st.destination), seed), `${field(world, st.destination).name}への道`)}
+      ${goalsHtml()}
       <section class="setup first">
         <h3>難易度</h3>
         <div class="seg seg3">${(Object.keys(DIFFICULTY) as Difficulty[])
@@ -146,6 +160,15 @@ export function showHangar(
       st.fuelPercent = Number((e.target as HTMLInputElement).value);
       render();
     });
+    root.querySelector<HTMLInputElement>("[data-bigtank]")?.addEventListener("change", (e) => {
+      // 積む燃料の量（L）はなるべくそのままにして、容量に対する割合を直す
+      const liters = (world.fuelCapacityL * st.fuelPercent) / 100;
+      st.bigTank = (e.target as HTMLInputElement).checked;
+      world = st.bigTank ? withBigTank(baseWorld) : baseWorld;
+      st.fuelPercent = Math.min(100, Math.round(((liters / world.fuelCapacityL) * 100) / 5) * 5);
+      rec = null;
+      render();
+    });
     root.querySelectorAll<HTMLInputElement>("[data-gear]").forEach((el) =>
       el.addEventListener("change", () => {
         st.equipment = { ...st.equipment, [el.dataset.gear!]: el.checked };
@@ -158,6 +181,19 @@ export function showHangar(
         render();
       }),
     );
+  }
+
+  /** 旅の評価の項目と4つの学びを、出発の前に見せる（何をねらって飛ぶか） */
+  function goalsHtml(): string {
+    const best = progress.best[baseWorld.id];
+    return `<div class="goals">
+      <p class="goals-head"><b>着いたら、この4つで評価される</b><small>各25点・S ${RANK_FROM.S}／A ${RANK_FROM.A}／B ${RANK_FROM.B} 点以上${
+        best ? `・自己ベスト <b class="rank-${best.rank}">${best.rank}</b> ${best.total} 点` : ""
+      }</small></p>
+      <div class="goal-list">${SCORE_GUIDE.map((g) => `<span class="goal"><b>${g.label}</b><small>${g.how}</small></span>`).join("")}</div>
+      <p class="small">${RISK_GUIDE}。</p>
+      <p class="lessons-preview"><small>旅の終わりにふり返る「4つの学び」</small>${LESSON_TITLES.map((t) => `<span>${t}</span>`).join("")}</p>
+    </div>`;
   }
 
   /** タブの見出しの下に出す、今の値 */
@@ -213,6 +249,11 @@ export function showHangar(
           <input type="range" min="0" max="100" step="5" value="${st.fuelPercent}" data-fuel />
           <span><b>${fuelL.toFixed(0)} L</b>（${st.fuelPercent}%・${(fuelL * 0.72).toFixed(0)} kg）</span>
         </div>
+        ${
+          tankOk
+            ? `<label class="big-tank"><input type="checkbox" data-bigtank ${st.bigTank ? "checked" : ""} /> <b>増設タンク</b>を積む（燃料 ${baseWorld.fuelCapacityL} L → ${withBigTank(baseWorld).fuelCapacityL} L）<small>おおわだつみを渡りきって手に入れた。たくさん積むほど重く、離陸と上昇が苦しくなる</small></label>`
+            : ""
+        }
         ${fuelDiagramHtml({
           fuelL,
           capacityL: world.fuelCapacityL,
@@ -274,7 +315,7 @@ export function showHangar(
       st.destination = el.dataset.id!;
       render();
     },
-    depart: () => onDepart(setupOf(), st.difficulty, st.destination),
+    depart: () => onDepart(setupOf(), st.difficulty, st.destination, world),
   });
 }
 

@@ -37,6 +37,8 @@ export const BASE_TAKEOFF = 300;
 // ---- 装備 ----
 export const EQUIPMENT_SLOTS = 3;
 export const EQUIPMENT_MAX_KG = 25;
+/** 増設タンク（★★★ おおわだつみを渡りきると使える）で増える燃料 L。タンクそのものの重さは入れていない */
+export const BIG_TANK_L = 40;
 
 // ---- 4.6〜4.8 プロペラの状態 ----
 /** ボルトがこれを下回ると、外れる確率が出てくる */

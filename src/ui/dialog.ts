@@ -1,17 +1,22 @@
 // 画面の上に重ねるダイアログ（格納庫・経由地・結果など）と、共通の小物。
 import { BOLT_DANGER, VIBRATION_RED, VIBRATION_YELLOW } from "../config";
 import { paramLine, type ParamId } from "../game/mechanicLines";
+import type { Rumor } from "../game/rumors";
 import { pilotLevel } from "../model/pilot";
 import type { AircraftCondition, Pilot } from "../model/types";
 
 const overlay = document.querySelector<HTMLElement>("#overlay")!;
 const dialog = document.querySelector<HTMLElement>("#dialog")!;
 
-/** ダイアログを開く（すでに開いていれば中身を差し替える。スクロール位置は保つ） */
-export function openDialog(html: string, opts: { wide?: boolean; keepScroll?: boolean } = {}): HTMLElement {
+/**
+ * ダイアログを開く（すでに開いていれば中身を差し替える。スクロール位置は保つ）。
+ * seeThrough：まわりを暗くしすぎず、後ろの景色を見せる（コース選び）
+ */
+export function openDialog(html: string, opts: { wide?: boolean; keepScroll?: boolean; seeThrough?: boolean } = {}): HTMLElement {
   const scroll = opts.keepScroll ? dialog.scrollTop : 0;
   dialog.innerHTML = html;
   dialog.classList.toggle("wide", !!opts.wide);
+  overlay.classList.toggle("see-through", !!opts.seeThrough);
   overlay.hidden = false;
   dialog.scrollTop = scroll;
   return dialog;
@@ -31,6 +36,14 @@ export const fmtDuration = (min: number) => {
 
 export const mechanicLine = (text: string) =>
   `<p class="mechanic"><span class="who">整備士</span><span>${text}</span></p>`;
+
+/** 土地の人のうわさ（整備士のひとことと並べて、色を変えて出す）。about は「◯◯への道」など、何のうわさか */
+export const rumorsHtml = (rs: Rumor[], about: string) =>
+  rs.length
+    ? `<div class="rumors">${rs
+        .map((r) => `<p class="mechanic rumor"><span class="who">${r.who}</span><span><small>${about}のうわさ</small>${r.text}</span></p>`)
+        .join("")}</div>`
+    : "";
 
 export interface TabItem<T extends string> {
   id: T;

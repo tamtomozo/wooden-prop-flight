@@ -37,7 +37,8 @@ import { equipmentKg } from "../data/equipment";
 import { isHasty } from "../model/pilot";
 import type { Forecast, ForecastItem } from "../model/types";
 import { fogChance, headwindAt, spreadAt } from "../model/weather";
-import { fmtDuration, mechanicLine, openDialog, pilotTable, setActions, tabsHtml } from "./dialog";
+import { rumorsFor } from "../game/rumors";
+import { fmtDuration, mechanicLine, openDialog, pilotTable, rumorsHtml, setActions, tabsHtml } from "./dialog";
 import { pilotDiagramHtml } from "./pilotDiagram";
 import { inspectionHtml } from "./inspection";
 import { legProfileHtml } from "./legProfile";
@@ -107,6 +108,7 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
       }
 
       ${mechanicLine(adviceAtField(c))}
+      ${leg ? rumorsHtml(rumorsFor(leg, c.weatherSeed + c.day), `${leg.to.name}への道`) : ""}
 
       ${tabsHtml<WaypointTab>(
         [

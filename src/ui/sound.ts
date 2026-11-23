@@ -134,6 +134,28 @@ export class Sound {
     }
   }
 
+  /** 実績を手に入れたときの、短いチャイム（ド・ミ・ソ・ド） */
+  chime() {
+    this.ensure();
+    const ctx = this.ctx;
+    if (!ctx || !this.enabled) return;
+    const t0 = ctx.currentTime + 0.05;
+    [523.25, 659.25, 783.99, 1046.5].forEach((hz, i) => {
+      const o = ctx.createOscillator();
+      o.type = "triangle";
+      o.frequency.value = hz;
+      const g = ctx.createGain();
+      const t = t0 + i * 0.11;
+      const len = i === 3 ? 1.2 : 0.4;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.12, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t + len);
+      o.connect(g).connect(this.master);
+      o.start(t);
+      o.stop(t + len + 0.05);
+    });
+  }
+
   private thunder(strength: number) {
     const ctx = this.ctx!;
     const src = ctx.createBufferSource();
