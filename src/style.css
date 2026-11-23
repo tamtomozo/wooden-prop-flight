@@ -960,3 +960,75 @@ button { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .achv-pop-host, .achv-pop, .achv-medal { animation: none; }
 }
+
+/* ---- チュートリアル：見る計器だけ明るく残し、説明のカードを重ねる ---- */
+.course-level.tutorial { letter-spacing: 0; color: #8fd3ff; font-weight: 700; }
+.tut-shade { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
+.tut-dim { fill: rgba(8, 10, 14, 0.62); }
+.tut-ring { fill: none; stroke: #ffd36b; stroke-width: 3; animation: tut-pulse 1.2s ease-in-out infinite; }
+.tut-tag { fill: #ffd36b; font-size: 20px; font-weight: 700; paint-order: stroke; stroke: #14161a; stroke-width: 4px; }
+@keyframes tut-pulse { 50% { stroke-opacity: 0.35; stroke-width: 6; } }
+.tut-card {
+  position: fixed;
+  z-index: 25;
+  overflow-y: auto;
+  background: #23282f;
+  color: var(--text);
+  border: 2px solid #ffd36b;
+  border-radius: 10px;
+  padding: 12px 16px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+.tut-card[hidden] { display: none; }
+.tut-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tut-badge { font-size: 0.75rem; font-weight: 700; color: #14161a; background: #ffd36b; border-radius: 999px; padding: 1px 10px; }
+.tut-badge.urgent { background: var(--red); color: #fff; }
+.tut-paused { font-size: 0.75rem; color: var(--muted); }
+.tut-card h3 { margin: 6px 0 4px; font-size: 1.15rem; }
+.tut-card h4 { margin: 10px 0 4px; font-size: 0.8rem; color: #ffd36b; letter-spacing: 1px; }
+.tut-intro { margin: 0; }
+.tut-meters { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.tut-meters li { display: flex; gap: 8px; align-items: flex-start; }
+.tut-num { color: #ffd36b; font-weight: 700; font-size: 1.05rem; line-height: 1.5; }
+.tut-action { margin: 0; padding: 8px 10px; background: rgba(76, 195, 138, 0.12); border-left: 3px solid var(--green); border-radius: 4px; }
+.tut-try { margin: 8px 0 0; color: #ffe9a8; }
+.tut-try small { display: block; color: var(--muted); font-size: 0.75rem; }
+.tut-card kbd, .tut-task kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 5px;
+  margin: 0 1px;
+  border: 1px solid #6b7480;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: #343b45;
+  font: 700 0.8rem/1.5 system-ui, sans-serif;
+  text-align: center;
+}
+.tut-buttons { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 12px; }
+.tut-buttons button { border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--text); padding: 6px 12px; cursor: pointer; }
+.tut-buttons .primary { background: var(--accent); color: #1b1f24; border-color: var(--accent); font-weight: 700; padding: 8px 16px; }
+.tut-buttons .primary small { display: block; font-weight: 400; font-size: 0.7rem; }
+.tut-buttons .tut-skip { font-size: 0.8rem; color: var(--muted); }
+.tut-task {
+  max-width: min(560px, 100%);
+  background: rgba(35, 40, 47, 0.92);
+  border: 2px solid #ffd36b;
+  color: #fff;
+  font-size: 0.9rem;
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+.tut-task[hidden] { display: none; }
+.tut-task.done { border-color: var(--green); }
+.tut-chip-label { font-weight: 700; color: #ffd36b; margin-right: 8px; }
+.tut-task.done .tut-chip-label { color: var(--green); }
+.dialog .tut-note { border: 2px solid #ffd36b; border-radius: 8px; padding: 8px 12px; margin: 10px 0; background: rgba(255, 211, 107, 0.07); }
+.dialog .tut-note h3 { margin: 0 0 4px; font-size: 0.95rem; color: #ffd36b; }
+.dialog .tut-note ol { margin: 0; padding-left: 1.4em; font-size: 0.88rem; line-height: 1.6; }
+@media (max-width: 820px) {
+  .tut-card { font-size: 0.82rem; padding: 10px 12px; }
+  .tut-card h3 { font-size: 1rem; }
+}

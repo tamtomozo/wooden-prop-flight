@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BIG_TANK_L } from "../src/config";
-import { COURSES, KAMOME, OWADATSUMI, SHIROGANE, TSURANARI } from "../src/data/courses";
-import { legBetween, WORLD } from "../src/data/world";
+import { COURSES, KAMOME, OWADATSUMI, SHIROGANE, TSURANARI, TUTORIAL_MOUNTAIN, TUTORIAL_SEA } from "../src/data/courses";
+import { legBetween } from "../src/data/world";
 import { newCondition, startCampaign, type CampaignState } from "../src/game/campaign";
 import { evaluateTrip } from "../src/game/evaluation";
 import {
@@ -83,8 +83,8 @@ describe("旅をまたいで残る記録", () => {
     expect(p).toEqual(emptyProgress());
   });
 
-  it("練習コースは「一日で渡りきる」にならない。引き返して着けば「引き返して、また飛んだ」", () => {
-    const practice = finishedTrip(WORLD);
+  it("チュートリアルは「一日で渡りきる」にならない。引き返して着けば「引き返して、また飛んだ」", () => {
+    const practice = finishedTrip(TUTORIAL_MOUNTAIN);
     expect(ids(recordTrip(emptyProgress(), practice, evaluateTrip(practice)))).not.toContain("oneDay");
     const back = finishedTrip(KAMOME, { turnBacks: 1 });
     expect(ids(recordTrip(emptyProgress(), back, evaluateTrip(back)))).toContain("comeback");
@@ -97,7 +97,7 @@ describe("旅をまたいで残る記録", () => {
     expect(got).toContain("real");
   });
 
-  it("練習のほかの4コースをすべて渡ると「すべての空を越えて」", () => {
+  it("チュートリアルのほかの4コースをすべて渡ると「すべての空を越えて」", () => {
     let p: Progress = emptyProgress();
     const got: string[] = [];
     for (const w of challengeCourses()) {
@@ -107,7 +107,7 @@ describe("旅をまたいで残る記録", () => {
       got.push(...ids(r));
     }
     expect(got.filter((id) => id === "all")).toHaveLength(1);
-    expect(challengeCourses()).toHaveLength(COURSES.length - 1);
+    expect(challengeCourses()).toHaveLength(COURSES.length - 2);
   });
 
   it("保存した記録が壊れていても読める（知らない実績や形の違う記録は捨てる）", () => {
@@ -130,11 +130,13 @@ describe("旅をまたいで残る記録", () => {
 });
 
 describe("最後の画面：次にすること", () => {
-  it("練習のあとは、いちばんやさしい本番のコースをすすめる", () => {
-    const c = finishedTrip(WORLD);
-    const ev = evaluateTrip(c);
-    const s = nextStep(WORLD, ev, recordTrip(emptyProgress(), c, ev).progress);
-    expect(s.course?.id).toBe(KAMOME.id);
+  it("チュートリアルのあとは、いちばんやさしい本番のコースをすすめる", () => {
+    for (const w of [TUTORIAL_SEA, TUTORIAL_MOUNTAIN]) {
+      const c = finishedTrip(w);
+      const ev = evaluateTrip(c);
+      const s = nextStep(w, ev, recordTrip(emptyProgress(), c, ev).progress);
+      expect(s.course?.id).toBe(KAMOME.id);
+    }
   });
 
   it("まだ渡っていないコースを、やさしい順にすすめる", () => {

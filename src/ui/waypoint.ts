@@ -61,6 +61,21 @@ export interface WaypointOptions {
   onDepart: () => void;
 }
 
+/** チュートリアル：経由地でやることの順番（はじめての経由地では開いておく） */
+function tutorialNote(c: CampaignState): string {
+  if (!c.world.tutorial) return "";
+  return `<details class="tut-note" ${c.records.length <= 1 ? "open" : ""}>
+    <summary><b>チュートリアル：経由地でやること</b></summary>
+    <ol>
+      <li><b>機体の点検</b>：ボルト・前縁・振動・エンジンを見る。赤いところがあれば直す。</li>
+      <li><b>整備と準備</b>：ボルトは飛ぶたびにゆるむ。<b>締め直す</b>。疲れていたら<b>休む</b>（泊まる）。</li>
+      <li><b>給油</b>：次の区間に要る燃料＋予備。積みすぎると重くて、短い滑走路から飛び立てない。</li>
+      <li><b>次の行き先</b>と<b>次の区間</b>：地図で行き先を選び、予報（雲・雨・風）と断面図（山・海）を見る。</li>
+      <li>霧や悪い天気なら<b>待つ</b>のも正しい判断。準備ができたら出発する。</li>
+    </ol>
+  </details>`;
+}
+
 export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
   let fuelTarget = Math.round(c.condition.fuelRemaining);
   let arrival = opts.arrival;
@@ -108,6 +123,7 @@ export function showWaypoint(c: CampaignState, opts: WaypointOptions) {
       }
 
       ${mechanicLine(adviceAtField(c))}
+      ${tutorialNote(c)}
       ${leg ? rumorsHtml(rumorsFor(leg, c.weatherSeed + c.day), `${leg.to.name}への道`) : ""}
 
       ${tabsHtml<WaypointTab>(

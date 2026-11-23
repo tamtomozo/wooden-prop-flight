@@ -2,7 +2,7 @@
 // 保存（localStorage）は画面の側でする。ここは記録の中身と、旅の結果から記録を更新する計算だけ。
 import { BIG_TANK_L } from "../config";
 import { COURSES, OWADATSUMI } from "../data/courses";
-import { seaKm, WORLD } from "../data/world";
+import { seaKm } from "../data/world";
 import type { World } from "../model/types";
 import type { CampaignState } from "./campaign";
 import { RANK_FROM, type TripEvaluation } from "./evaluation";
@@ -25,8 +25,8 @@ export interface Progress {
 
 export const emptyProgress = (): Progress => ({ best: {}, achievements: [] });
 
-/** 練習コースを除いた、挑戦するコース */
-export const challengeCourses = (): World[] => COURSES.filter((w) => w.id !== WORLD.id);
+/** チュートリアルを除いた、挑戦するコース */
+export const challengeCourses = (): World[] => COURSES.filter((w) => !w.tutorial);
 
 /** 旅を終えたときの材料（実績の判定に使う） */
 interface TripFacts {
@@ -62,9 +62,9 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: "oneDay",
     title: "一日で渡りきる",
-    hint: "練習ではないコースを、泊まらずに",
+    hint: "チュートリアルではないコースを、泊まらずに",
     text: "1日目のうちに、海や山の向こうへ着いた。",
-    check: ({ c }) => c.world.id !== WORLD.id && c.day === 1,
+    check: ({ c }) => !c.world.tutorial && c.day === 1,
   },
   {
     id: "comeback",
@@ -119,7 +119,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   {
     id: "all",
     title: "すべての空を越えて",
-    hint: "練習のほかの、すべてのコースで",
+    hint: "チュートリアルのほかの、すべてのコースで",
     text: "海峡・諸島・山脈・大洋、すべてのコースを渡りきった。",
     check: ({ after }) => challengeCourses().every((w) => after.best[w.id]),
   },
@@ -212,7 +212,7 @@ export interface NextStep {
   courseReason: string;
 }
 
-const stars = (w: World) => "★".repeat(w.level);
+const stars = (w: World) => (w.tutorial ? "" : "★".repeat(w.level));
 
 /**
  * 旅を終えたあと、次に何をするか。
@@ -235,7 +235,7 @@ export function nextStep(world: World, ev: TripEvaluation, p: Progress): NextSte
     return {
       advice,
       course: untried,
-      courseReason: world.id === WORLD.id ? "練習はおしまいだ。本番の海を渡ろう" : `まだ渡っていない ${stars(untried)} のコースだ`,
+      courseReason: world.tutorial ? "チュートリアルはおしまいだ。本番の空へ" : `まだ渡っていない ${stars(untried)} のコースだ`,
     };
   }
   // 全部渡ったら、S をとれていないコースのうち点のいちばん低いもの
@@ -249,4 +249,4 @@ export function nextStep(world: World, ev: TripEvaluation, p: Progress): NextSte
   return { advice, course: null, courseReason: "" };
 }
 
-export const courseLabel = (w: World) => `${stars(w)} ${w.title}`;
+export const courseLabel = (w: World) => `${stars(w)} ${w.title}`.trim();

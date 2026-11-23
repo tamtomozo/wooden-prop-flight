@@ -99,6 +99,15 @@ export function showHangar({ world: baseWorld, seed, onDepart, onChangeCourse, p
         <button data-act="change-course">コースを選び直す</button>
       </div>
       <p class="lead"><b>${world.title}</b>　${start.name}から${goal.name}への旅。</p>
+      ${
+        world.tutorial
+          ? `<div class="tut-note"><h3>チュートリアル：格納庫ではこれだけでいい</h3><ol>
+              <li>下の<b>「整備士のおすすめセッティングにする」</b>を押す（プロペラ・燃料・装備が決まる）。</li>
+              <li><b>「ボルトの締め付け」</b>のタブで、ボルトを自分で締める（ちょうどいい強さで止める）。</li>
+              <li><b>出発</b>する。飛んでいるあいだは、大事な操作のたびに飛行が止まって、見る計器と正しい操作を説明する。</li>
+            </ol></div>`
+          : ""
+      }
       ${rumorsHtml(rumorsFor(legBetween(world, world.startId, st.destination), seed), `${field(world, st.destination).name}への道`)}
       ${goalsHtml()}
       <section class="setup first">

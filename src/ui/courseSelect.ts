@@ -1,7 +1,7 @@
 // 最初の画面：コースを選ぶ。陸路では行けない海峡・諸島・大洋と、高い山脈を飛びこえる旅。
 import { COURSES } from "../data/courses";
 import { ACHIEVEMENTS, type Progress } from "../game/records";
-import { field, legBetween, longestSeaKm, pathDistance, shortestPath, WORLD } from "../data/world";
+import { field, legBetween, longestSeaKm, pathDistance, shortestPath } from "../data/world";
 import type { World } from "../model/types";
 import { mechanicLine, openDialog, setActions } from "./dialog";
 import { mapSvg } from "./mapView";
@@ -34,11 +34,15 @@ export function showCourseSelect({ onChoose, onQuick, current, progress }: Cours
     const sea = [hi > 0 ? `海の上 ${lo === hi ? hi : `${lo}〜${hi}`} km` : "", ridge > 0 ? `いちばん高い山 ${ridge} m` : ""]
       .filter(Boolean)
       .join("・") || "海も山もない";
-    return `<div class="course-card ${w.id === current ? "on" : ""} ${w.id === WORLD.id ? "practice" : ""}">
+    return `<div class="course-card ${w.id === current ? "on" : ""} ${w.tutorial ? "practice" : ""}">
       ${mapSvg(w, { current: w.startId, destination: null, selectable: [], suggested: path, mini: true })}
       <span class="course-body">
         <b class="course-title">${w.title}</b>
-        <span class="course-level" aria-label="難しさ ${w.level}">${"★".repeat(w.level)}${"☆".repeat(3 - w.level)}</span>
+        ${
+          w.tutorial
+            ? `<span class="course-level tutorial">はじめての人むけ・飛行を止めて説明つき</span>`
+            : `<span class="course-level" aria-label="難しさ ${w.level}">${"★".repeat(w.level)}${"☆".repeat(3 - w.level)}</span>`
+        }
         ${bestHtml(progress, w.id)}
         <small class="course-route">${field(w, w.startId).name} → ${field(w, w.goalId).name}・最短 ${pathDistance(w, path)} km・${sea}</small>
         <small>${w.description}</small>
@@ -53,7 +57,7 @@ export function showCourseSelect({ onChoose, onQuick, current, progress }: Cours
 
   openDialog(
     `<h2>コースを選ぶ</h2>
-    <p class="lead">陸の道では行けない、海の向こう・山の向こうへ。木のプロペラ機で、海峡・諸島・山脈・大洋を飛びこえる。</p>
+    <p class="lead">陸の道では行けない、海の向こう・山の向こうへ。木のプロペラ機で、海峡・諸島・山脈・大洋を飛びこえる。はじめての人は、チュートリアル（海ルート・山ルート）から。</p>
     ${mechanicLine("海の上では、エンジンが止まったら降りる畑はない。山の上では、空気が薄くて上がらない。燃料と天気と、引き返す勇気がすべてだ。")}
     <div class="course-list">${cards}</div>
     ${achievementsHtml(progress)}`,

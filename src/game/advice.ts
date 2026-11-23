@@ -77,7 +77,9 @@ function realAdvice(s: FlightState): [Key, string] {
   if (e.cbDistance < CB_DANGER_KM)
     return ["cb", `積乱雲に近すぎる（${Math.round(e.cbDistance)} km）！ 37 km 以上離れろ。横によけるか、引き返せ。`];
   const ahead = aheadTerrain(s);
-  if (ahead > s.altitude - 150) return ["terrain", `前方の山（${Math.round(ahead)} m）に高度が足りない！ 上昇するか、引き返せ。`];
+  // 離陸したばかりのときは、滑走路の先の地面そのものを「山」と言わない
+  const justDeparted = !s.returning && s.elapsedMin < 3 && s.altitude - s.leg.from.elevation < 150;
+  if (ahead > s.altitude - 150 && !justDeparted) return ["terrain", `前方の山（${Math.round(ahead)} m）に高度が足りない！ 上昇するか、引き返せ。`];
   if (s.holding) return ["fog", `${destination(s).name}は霧だ。燃料と相談して、待つか、引き返すか決めろ。`];
   if (p.rpm > REDLINE_RPM)
     return [

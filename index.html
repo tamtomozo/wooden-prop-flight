@@ -47,6 +47,7 @@
 
           <!-- お知らせと整備士のひとこと（景色の下に字幕のように重ねる） -->
           <div class="stage-bottom">
+            <div class="tut-task" id="tut-task" hidden></div>
             <div class="toast" id="toast" hidden></div>
             <p class="mechanic"><span class="who">整備士</span><span id="advice"></span></p>
           </div>
@@ -83,13 +84,13 @@
 
         <div class="side">
           <div class="nav">
-            <div class="navbox">
+            <div class="navbox" id="nav-alt">
               <span class="nav-name" data-param="C4" title="クリックで整備士のひとこと">高度</span>
               <button data-nav="alt-down" title="F">▼</button>
               <output id="alt-target"></output>
               <button data-nav="alt-up" title="R">▲</button>
             </div>
-            <div class="navbox">
+            <div class="navbox" id="nav-course">
               <span class="nav-name" data-param="COURSE" title="クリックで整備士のひとこと">よける</span>
               <button data-nav="left" title="Q">◀</button>
               <output id="course"></output>

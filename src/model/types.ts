@@ -196,8 +196,10 @@ export interface World {
   description: string;
   /** もとにした史実 */
   history: string;
-  /** 難しさ 1..3 */
+  /** 難しさ 1..3（チュートリアルは 0） */
   level: number;
+  /** チュートリアルのコース（飛行中に止めて、計器と操作を説明する）。sea＝海ルート、mountain＝山ルート */
+  tutorial?: "sea" | "mountain";
   /** 陸地の形（地図の km。[x, y] の並び）。書かなければ全部が陸 */
   land?: [number, number][][];
   fields: Waypoint[];

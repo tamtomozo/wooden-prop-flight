@@ -1,6 +1,7 @@
 // コース：最初に選ぶ旅の舞台。陸路では行けない、架空の海峡・諸島・大洋と、高い山脈を飛びこえる。
 // どれも史実の挑戦をもとにしているが、地名と地形は架空。
 //
+//   チュートリアル … 本土の地図（world.ts）から切り出した、海ルートと山ルート。飛行中に止めて計器と操作を説明する
 //   かもめ海峡   … 1909年 ブレリオの英仏海峡横断（短い海越え。霧と横風）
 //   つらなり諸島 … 1919年 NC-4 の大西洋横断（島から島へ、何日もかけて）
 //   おおわだつみ … 1919年 アルコックとブラウン・1927年 リンドバーグの無着陸横断（長い海の上を一気に）
@@ -9,7 +10,7 @@
 // 天気のひな形と山の位置は world.ts と同じく、道の a → b の向きで書く。
 // 海の上かどうかは、陸地の形（land）から自動で決まる。
 import type { Edge, Waypoint, World } from "../model/types";
-import { WORLD } from "./world";
+import { field, WORLD } from "./world";
 
 const winds = (dir: number, speeds: [number, number, number, number], turn = 0) =>
   [0, 1000, 2000, 3000].map((altitude, i) => ({ altitude, direction: dir + turn * i, speed: speeds[i] }));
@@ -1080,8 +1081,88 @@ export const SHIROGANE: World = {
   planSpeedKmh: 105,
 };
 
-/** 最初に選べるコース（並び順のまま画面に出す） */
-/** コース選びに並べる順。やさしいものから（練習 → ★ → ★★ → ★★★） */
-export const COURSES: World[] = [WORLD, KAMOME, TSURANARI, SHIROGANE, OWADATSUMI];
+// =====================================================================
+// 0. チュートリアル（本土の地図から道を切り出す）
+// =====================================================================
+/**
+ * 本土の地図から、ids の飛行場と、そのあいだの道だけを取り出す。
+ * 最初の区間は天気をなくし（落ち着いて計器と操作を覚える）、積乱雲は本番のコースまでとっておく。
+ */
+function tutorialMap(ids: string[], notes: Record<string, string> = {}): Pick<World, "fields" | "edges"> {
+  const [first, second] = ids;
+  const isFirst = (e: Edge) => (e.a === first && e.b === second) || (e.a === second && e.b === first);
+  const edges = WORLD.edges
+    .filter((e) => ids.includes(e.a) && ids.includes(e.b))
+    .map(
+      (e): Edge => ({
+        ...e,
+        note: notes[`${e.a}-${e.b}`] ?? e.note,
+        weather: {
+          ...e.weather,
+          features: isFirst(e) ? [] : e.weather.features.filter((f) => f.kind !== "cb"),
+        },
+      }),
+    );
+  return { fields: ids.map((id) => field(WORLD, id)), edges };
+}
+
+const TUTORIAL_BASE = {
+  level: 0,
+  startId: "minami",
+  goalId: "kita",
+  fuelCapacityL: WORLD.fuelCapacityL,
+  startMin: WORLD.startMin,
+  sunsetMin: WORLD.sunsetMin,
+  planSpeedKmh: WORLD.planSpeedKmh,
+} satisfies Partial<World>;
+
+export const TUTORIAL_SEA: World = {
+  ...TUTORIAL_BASE,
+  ...tutorialMap(["minami", "hamakaze", "numata", "kita"], {
+    "hamakaze-numata": "海岸線を北へ。途中で湾の上（海の上 約 65 km）を横切る。どの高さでも向かい風。低い雲と雨に注意。",
+  }),
+  id: "tutorial-sea",
+  title: "チュートリアル：海ルート",
+  name: "みなみ → はまかぜ → ぬまた → きた",
+  tutorial: "sea",
+  description:
+    "海沿いを北へ3区間。はじめの区間で、スロットル・ミクスチャー・高度・燃料の計器と操作を、飛行を止めながら覚える。2区間目で小さな湾を横切り、海の上の飛び方（引き返し限界点）を学ぶ。",
+  history: "大事な操作のたびに飛行が止まり、見る計器が光って、正しい操作を説明する。海を渡るコースの前に。",
+  land: [
+    [
+      [-240, -80],
+      [160, -80],
+      [160, 720],
+      [-240, 720],
+      [-225, 600],
+      [-245, 480],
+      [-230, 400],
+      [-240, 306],
+      // ぬまたの手前の湾（はまかぜ → ぬまた の道が横切る）
+      [-150, 300],
+      [-128, 282],
+      [-126, 258],
+      [-145, 240],
+      [-240, 236],
+      [-215, 170],
+      [-235, 60],
+    ],
+  ],
+};
+
+export const TUTORIAL_MOUNTAIN: World = {
+  ...TUTORIAL_BASE,
+  ...tutorialMap(["minami", "kawara", "takane", "kita"]),
+  id: "tutorial-mountain",
+  title: "チュートリアル：山ルート",
+  name: "みなみ → かわら → たかね → きた",
+  tutorial: "mountain",
+  description:
+    "山を越えて北へ3区間。はじめの区間で、スロットル・ミクスチャー・高度・燃料の計器と操作を、飛行を止めながら覚える。2区間目で 1900 m の山なみを越え、山の手前での高度の取り方を学ぶ。",
+  history: "大事な操作のたびに飛行が止まり、見る計器が光って、正しい操作を説明する。山脈を越えるコースの前に。",
+};
+
+/** コース選びに並べる順。チュートリアル → ★ → ★★ → ★★★ */
+export const COURSES: World[] = [TUTORIAL_SEA, TUTORIAL_MOUNTAIN, KAMOME, TSURANARI, SHIROGANE, OWADATSUMI];
 
 export const courseById = (id: string): World => COURSES.find((c) => c.id === id) ?? KAMOME;

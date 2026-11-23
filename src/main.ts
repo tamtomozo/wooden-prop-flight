@@ -48,6 +48,8 @@ import { RouteBar } from "./ui/routeBar";
 import { BackScene } from "./ui/scene3d";
 import { Sound } from "./ui/sound";
 import { showWaypoint, type ArrivalInfo } from "./ui/waypoint";
+import { checkTask, markShown, newTutorial, nextTutorialStep, type TutorialContext, type TutorialState } from "./game/tutorial";
+import { TutorialView } from "./ui/tutorial";
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -86,6 +88,11 @@ let running = false;
 let attract = false;
 let paused = false;
 let speed = 1;
+/** チュートリアルのコースを飛んでいるあいだの進み具合（それ以外は null） */
+let tutorial: TutorialState | null = null;
+const tutView = new TutorialView();
+/** 急ぎでない説明は、前の説明からこの時刻（performance.now）まで出さない */
+let tutCooldownUntil = 0;
 let showDetails = false;
 
 /** 格納庫にいる間、背景に見せておく機体（滑走路の上） */
@@ -173,6 +180,12 @@ mixtureInput.addEventListener("input", () => applyControls(intendedControls(flig
 
 window.addEventListener("keydown", (e) => {
   if (!running) return;
+  // チュートリアルの説明が出ているあいだは、Enter / スペースで「わかった」（飛行を再開）
+  if (tutView.isOpen() && (e.key === " " || e.key === "Enter")) {
+    e.preventDefault();
+    tutView.close();
+    return;
+  }
   const want = intendedControls(flight);
   const t = Math.round(want.throttle * 100);
   const m = want.mixture;
@@ -324,7 +337,55 @@ function setPaused(v: boolean) {
   pauseBtn.textContent = paused ? "再開" : "一時停止";
   pauseBtn.classList.toggle("on", paused);
 }
-pauseBtn.addEventListener("click", () => running && setPaused(!paused));
+pauseBtn.addEventListener("click", () => {
+  if (!running) return;
+  if (tutView.isOpen()) tutView.close();
+  else setPaused(!paused);
+});
+
+// ---- チュートリアル：場面ごとに止めて、見る計器と正しい操作を説明する ----
+function tutorialContext(): TutorialContext {
+  const c = campaign!;
+  return { rule: DIFFICULTY[c.difficulty], world: c.world, fuelCapacityL: c.world.fuelCapacityL };
+}
+
+function tickTutorial(now: number) {
+  const t = tutorial;
+  if (!t || !campaign || flight.status !== "flying") return;
+  if (checkTask(t, flight)) {
+    tutView.taskDone();
+    tutCooldownUntil = now + 2500;
+  }
+  if (tutView.isOpen()) return;
+  const ctx = tutorialContext();
+  const step = nextTutorialStep(t, flight, ctx, now >= tutCooldownUntil);
+  if (!step) return;
+  markShown(t, step, flight);
+  setPaused(true);
+  setSpeed(1);
+  tutView.setTask(null);
+  tutView.show(step, flight, ctx, {
+    onClose: () => {
+      setPaused(false);
+      tutView.setTask(t.task?.text ?? null);
+      tutCooldownUntil = performance.now() + 3500;
+    },
+    onSkipAll: () => {
+      t.off = true;
+      t.task = null;
+      tutView.setTask(null);
+      setPaused(false);
+      toast(["チュートリアルの説明をとばした。この旅では、もう止まらない"]);
+    },
+  });
+}
+
+/** チュートリアルの画面を片づける（旅の進み具合は残す） */
+function clearTutorialView() {
+  tutView.hide();
+  tutView.setTask(null);
+  if (tutorial) tutorial.task = null;
+}
 
 document.querySelectorAll<HTMLButtonElement>("[data-speed]").forEach((b) =>
   b.addEventListener("click", () => setSpeed(Number(b.dataset.speed))),
@@ -349,6 +410,8 @@ function toast(lines: string[]) {
 function chooseCourse() {
   running = false;
   campaign = null;
+  clearTutorialView();
+  tutorial = null;
   legStart = null;
   // 後ろの景色：選んでいるコースの最初の区間を、機体がひとりでに飛んでいく
   flight = previewFlight();
@@ -382,6 +445,7 @@ function quickStart(w: World) {
   const rec = recommendSetup(world, destination, "normal");
   const setup: Setup = { pitch: rec.pitch, fuelPercent: rec.fuelPercent, torqueResult: "ok", equipment: rec.equipment };
   campaign = startCampaign(world, setup, Date.now(), "normal", destination);
+  tutorial = world.tutorial ? newTutorial() : null;
   cockpit.setDifficulty("normal");
   cockpit.setFuelCapacity(world.fuelCapacityL);
   departLeg([
@@ -394,6 +458,8 @@ function goHangar() {
   running = false;
   attract = false;
   campaign = null;
+  clearTutorialView();
+  tutorial = null;
   legStart = null;
   flight = previewFlight();
   $("#sunset").textContent = fmtClock(world.sunsetMin);
@@ -408,6 +474,7 @@ function goHangar() {
     // 増設タンクを積んだときは、タンクの大きい舞台（w）で旅をする
     onDepart: (setup, difficulty, destination, w) => {
       campaign = startCampaign(w, setup, seed, difficulty, destination);
+      tutorial = w.tutorial ? newTutorial() : null;
       cockpit.setDifficulty(difficulty);
       cockpit.setFuelCapacity(w.fuelCapacityL);
       departLeg();
@@ -424,6 +491,7 @@ function departLeg(extraNotes: string[] = []) {
   cockpit.setLeg(f.leg);
   applyControls(f.controls.throttle * 100, f.controls.mixture, true);
   closeDialog();
+  clearTutorialView();
   running = true;
   setPaused(false);
   lastEnv = { inCloud: false, rain: 0, turbulence: 0, ice: false };
@@ -432,6 +500,7 @@ function departLeg(extraNotes: string[] = []) {
 
 function onFlightEnded() {
   running = false;
+  clearTutorialView();
   const c = campaign!;
   const f = flight;
   if (f.status === "arrived" || f.status === "returned") {
@@ -600,6 +669,7 @@ function frame(now: number) {
     stepFlight(flight, realDt * GAME_MINUTES_PER_SECOND * speed);
     watchFlight();
     if (flight.status !== "flying") onFlightEnded();
+    else tickTutorial(now);
   } else if (attract) {
     // コース選びの後ろの景色：速めに飛ばし、区間が終わったら滑走路からやり直す
     autopilot(flight, 0.7);
