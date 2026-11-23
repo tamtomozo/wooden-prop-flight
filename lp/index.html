@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>木製プロペラ長距離飛行 ― 海の向こう・山の向こうへ</title>
+    <meta name="description" content="木のプロペラ機で、海峡・諸島・山脈・大洋を飛びこえるブラウザゲーム。燃料と天気と、引き返す勇気がすべて。インストール不要・無料。" />
+    <meta property="og:title" content="木製プロペラ長距離飛行" />
+    <meta property="og:description" content="木のプロペラ機で、海峡・諸島・山脈・大洋を飛びこえる。燃料と天気と、引き返す勇気がすべて。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="img/title.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='14' y='2' width='4' height='28' rx='2' fill='%238b5a2b'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23c9433a'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- ===== ヒーロー ===== -->
+    <header class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <nav class="topnav" aria-label="ページ内">
+        <a class="brand" href="#top">
+          <svg viewBox="-50 -50 100 100" aria-hidden="true"><g class="blades"><path d="M -5 -4 C -6 -20 -7 -38 -1 -47 C 6 -38 6 -20 5 -4 Z" fill="url(#wood)" /><path d="M -5 4 C -6 20 -7 38 -1 47 C 6 38 6 20 5 4 Z" fill="url(#wood)" /></g><circle r="8" fill="#c9433a" /><circle r="3" cx="-2" cy="-2" fill="#e8806f" /></svg>
+          木製プロペラ長距離飛行
+        </a>
+        <ul>
+          <li><a href="#about">どんなゲーム</a></li>
+          <li><a href="#courses">コース</a></li>
+          <li><a href="#howto">遊び方</a></li>
+          <li><a class="nav-play" href="https://tamtomozo.github.io/wooden-prop-flight/">遊ぶ</a></li>
+        </ul>
+      </nav>
+
+      <div class="hero-inner" id="top">
+        <svg class="hero-prop" viewBox="-50 -50 100 100" aria-hidden="true"><g class="blades"><path d="M -5 -4 C -6 -20 -7 -38 -1 -47 C 6 -38 6 -20 5 -4 Z" fill="url(#wood)" /><path d="M -5 4 C -6 20 -7 38 -1 47 C 6 38 6 20 5 4 Z" fill="url(#wood)" /></g><circle r="8" fill="#c9433a" /><circle r="3" cx="-2" cy="-2" fill="#e8806f" /></svg>
+        <p class="kicker">海の向こう・山の向こうへ</p>
+        <h1>木製プロペラ<br />長距離飛行</h1>
+        <div class="pitch">
+          <!-- 1. プリヘッド：ターゲット層をはっきりさせ、注意を引く -->
+          <p class="prehead"><span class="nb">空の旅を、操縦の腕ではなく</span><span class="nb">「判断」で楽しみたい人へ</span></p>
+          <!-- 2. キャッチコピー：先を読み続けさせる -->
+          <p class="catch"><span class="nb">その燃料で、</span><span class="nb">向こう岸まで届くか。</span></p>
+          <!-- 3. デッキコピー：キャッチのインパクトを補強し、好奇心をそそる -->
+          <p class="deck">
+            <span class="nb">海の上で止まれば、降りる畑はない。</span><span class="nb">山の上では、空気が薄くて上がらない。</span><br />
+            <span class="nb">木のプロペラ機に積めるのは、</span><span class="nb">80リットルの燃料と、引き返す勇気だけ。</span>
+          </p>
+          <!-- 4. リード：誰に向けたものか、読む（遊ぶ）とどんな得があるか -->
+          <p class="lead">
+            海峡・諸島・山脈・大洋を飛びこえる、長距離飛行のブラウザゲームです。むずかしい操縦はいりません。<!--
+            -->機体を整え、天気を読み、計器を見て、行くか戻るかを決める――史実の冒険飛行家たちと同じ悩みを、チュートリアルから一歩ずつ味わえます。
+          </p>
+        </div>
+        <div class="cta">
+          <a class="btn primary" href="https://tamtomozo.github.io/wooden-prop-flight/">
+            ブラウザで遊ぶ<small>無料・インストール不要</small>
+          </a>
+          <a class="btn ghost" href="#about">どんなゲーム？</a>
+        </div>
+        <ul class="badges">
+          <li>全8コース</li>
+          <li>チュートリアルつき</li>
+          <li>難易度 3段階</li>
+          <li>PC・キーボード推奨</li>
+        </ul>
+      </div>
+      <a class="scroll" href="#about" aria-label="下へ">▼</a>
+    </header>
+
+    <main>
+      <!-- ===== コンセプト ===== -->
+      <section class="section concept" id="about">
+        <div class="wrap">
+          <p class="eyebrow">ABOUT</p>
+          <h2><span class="nb">速さを競う</span><span class="nb">ゲームではない。</span><br /><span class="nb">無事に<em>着く</em></span><span class="nb">ゲームだ。</span></h2>
+          <p class="section-lead">
+            舞台は、陸の道では行けない海の向こう・山の向こう。1909年の英仏海峡横断、1919年の大西洋横断、アルプスやアンデスの山越え――
+            史実の挑戦をもとにした架空のコースを、木のプロペラをつけた複葉機で飛びこえます。
+            機体を整え、空を読み、計器を見て、ときには引き返す。その積み重ねで、遠い目的地へたどり着きます。
+          </p>
+
+          <div class="pillars">
+            <article class="pillar">
+              <div class="pillar-icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48"><path d="M8 40V20l16-12 16 12v20" /><path d="M16 40V28h16v12" /><circle cx="24" cy="20" r="2.5" /></svg>
+              </div>
+              <h3>格納庫で、整える</h3>
+              <p>プロペラの性格（上昇型か巡航型か）、積む燃料の量、気象ラジオや予備のプロペラ。そして、ボルトの締め付けは自分の手で。何を選ぶかで、越えられる山と渡れる海が変わります。</p>
+            </article>
+            <article class="pillar">
+              <div class="pillar-icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48"><circle cx="24" cy="26" r="16" /><path d="M24 26l9-8" /><path d="M12 26h3M33 26h3M24 14v3" /></svg>
+              </div>
+              <h3>計器を見て、飛ぶ</h3>
+              <p>スロットルとミクスチャー、高度とキャブレターヒート。対地速度・回転計・排気温度・燃料計を読みながら、「届く距離」を少しでも伸ばしていきます。</p>
+            </article>
+            <article class="pillar">
+              <div class="pillar-icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48"><path d="M30 12a14 14 0 1 0 6 18" /><path d="M24 8l8 4-6 7" /></svg>
+              </div>
+              <h3>引き返す、勇気</h3>
+              <p>前方に積乱雲。燃料は予備ぎりぎり。海の上では、止まったら降りる畑はない。「引き返し限界点」を越える前に決めること。勇気ある撤退は、評価でもちゃんと報われます。</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 見どころ（スクリーンショット） ===== -->
+      <section class="section features">
+        <div class="wrap">
+          <p class="eyebrow">FEATURES</p>
+          <h2>見どころ</h2>
+
+          <article class="feature">
+            <figure class="shot"><img src="img/flight.jpg" alt="海の上を飛ぶ複葉機と計器盤。上に飛行メモ、下に上から見た地図と断面図" loading="lazy" width="1440" height="900" /></figure>
+            <div class="feature-text">
+              <p class="num">01</p>
+              <h3>海を渡る ― 降りる場所のない空</h3>
+              <p>海の上ではエンジンが止まれば着水。予備のプロペラがあっても交換はできません。画面下の帯には、今の速さと燃料で出発地へ戻れるいちばん遠い地点――<b>引き返し限界点</b>が赤い線で出ます。</p>
+              <ul class="ticks">
+                <li>飛行メモに「対地速度・届く距離・到着予定・前方の天気」</li>
+                <li>上から見た地図と、横から見た高度の断面</li>
+                <li>整備士がそのときどきにひとこと</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="feature reverse">
+            <figure class="shot"><img src="img/mountain.jpg" alt="高い山なみの上を高度3500mで飛ぶ複葉機" loading="lazy" width="1440" height="900" /></figure>
+            <div class="feature-text">
+              <p class="num">02</p>
+              <h3>山を越える ― 薄い空気と凍る高さ</h3>
+              <p>高く上がるほど上昇は鈍り、3000 m では半分に。重いまま谷を出れば、峠に間に合わないことも。高い空は向かい風、凍結高度より上では翼やプロペラに氷がつきます。山の上の飛行場では、離陸に必要な距離も伸びます。</p>
+              <ul class="ticks">
+                <li>上昇型のプロペラなら山に強く、巡航型なら海に強い</li>
+                <li>雪をかぶった峰、岩の地面、峰にかかる雲</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="feature">
+            <figure class="shot"><img src="img/hangar.jpg" alt="格納庫の画面。土地の人のうわさ話、評価の4項目、難易度、セッティングのタブ" loading="lazy" width="1440" height="900" /></figure>
+            <div class="feature-text">
+              <p class="num">03</p>
+              <h3>格納庫と経由地 ― 飛ぶ前がいちばん大事</h3>
+              <p>行き先は地図で選び、区間ごとの断面図と予報を見て、プロペラ・燃料・装備を決めます。経由地では機体を点検し、整備・給油・宿泊。迷ったら「整備士のおすすめセッティング」が理由つきで教えてくれます。</p>
+              <ul class="ticks">
+                <li>村の人・漁師・郵便機の操縦士たちの<b>うわさ話</b>が次の空のヒントに</li>
+                <li>ボルトの締め付けは、タイミングを合わせるミニゲーム</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="feature reverse">
+            <figure class="shot"><img src="img/tutorial.jpg" alt="チュートリアルの説明カード。飛行が一時停止し、見るべきボタンが光っている" loading="lazy" width="1440" height="900" /></figure>
+            <div class="feature-text">
+              <p class="num">04</p>
+              <h3>はじめてでも ― 止めて教えるチュートリアル</h3>
+              <p>海ルート・山ルートの2つのチュートリアルでは、大事な操作のたびに飛行を一時停止。見る計器を光らせ、意味と正しい操作を説明します。「やってみよう」ができたら「できた！」。</p>
+              <ul class="ticks">
+                <li>上昇・混ぜ方・巡航・燃料の見方を、順番にひとつずつ</li>
+                <li>雲の中・積乱雲・山・海・着氷など、はじめての場面でも説明</li>
+              </ul>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ===== 空の手ごわさ ===== -->
+      <section class="section sky">
+        <div class="wrap">
+          <p class="eyebrow">WEATHER &amp; PILOT</p>
+          <h2><span class="nb">空は、</span><span class="nb">毎回ちがう顔をする</span></h2>
+          <p class="section-lead">天気は予報どおりとはかぎりません。気象ラジオを積めば、飛びながら予報を取り直せます。そして疲れや焦りは、操縦者の判断をにぶらせます。</p>
+          <ul class="chips">
+            <li>雨</li><li>雲</li><li>積乱雲</li><li>高度ごとの風</li><li>乱気流</li><li>朝の霧</li><li>着氷</li><li>キャブレター凍結</li><li>日没</li><li>予報の不確かさ</li><li>疲労</li><li>焦り</li><li>空間識失調</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ===== コース ===== -->
+      <section class="section courses" id="courses">
+        <div class="wrap">
+          <p class="eyebrow">COURSES</p>
+          <h2><span class="nb">史実の挑戦をもとにした、</span><span class="nb">8つの空路</span></h2>
+          <p class="section-lead">地名と地形は架空。どれも陸の道では行けない、海の向こう・山の向こうへの旅です。</p>
+
+          <div class="course-grid">
+            <article class="course tut">
+              <p class="level"><span class="tag">チュートリアル</span></p>
+              <h3>海ルート</h3>
+              <p>海沿いを北へ3区間。2区間目で湾の上（約 65 km）を横切り、海の上の飛び方を覚える。</p>
+            </article>
+            <article class="course tut">
+              <p class="level"><span class="tag">チュートリアル</span></p>
+              <h3>山ルート</h3>
+              <p>山を越えて北へ3区間。2区間目で 1900 m の山なみを越え、山の手前での高度の取り方を学ぶ。</p>
+            </article>
+            <article class="course">
+              <p class="level" aria-label="難しさ 1">★<span>☆☆</span></p>
+              <h3>かもめ海峡を渡る</h3>
+              <p>海の上は 50〜100 km。まっすぐ渡るか、岬や島で海を短くするか。朝の海霧と横風。</p>
+              <p class="history">1909年 ブレリオの英仏海峡横断</p>
+            </article>
+            <article class="course">
+              <p class="level" aria-label="難しさ 2">★★<span>☆</span></p>
+              <h3>つらなり諸島を島づたいに</h3>
+              <p>海の上 130〜330 km を何度も。島の滑走路は短く、整備場のない島もある。</p>
+              <p class="history">1919年 NC-4 の大西洋横断</p>
+            </article>
+            <article class="course">
+              <p class="level" aria-label="難しさ 2">★★<span>☆</span></p>
+              <h3>しろがね山脈を越える</h3>
+              <p>3300 m の峰のすぐ横を越える直行か、峠の谷から急上昇か、遠回りの南回りか。</p>
+              <p class="history">1910年 チャベス／1918年 ゴドイ</p>
+            </article>
+            <article class="course">
+              <p class="level" aria-label="難しさ 2">★★<span>☆</span></p>
+              <h3>くもじ峠を越えて島へ</h3>
+              <p>山を越えてから、海の上 135 km の島へ。峠を行くか、島づたいに回るか。</p>
+              <p class="history">1930年 エイミー・ジョンソンの英豪飛行</p>
+            </article>
+            <article class="course hard">
+              <p class="level" aria-label="難しさ 3">★★★</p>
+              <h3>おおわだつみを無着陸で</h3>
+              <p>海の上 508 km の直行は、満タン・最良燃費でも残りは十数 L。北回りは霧と凍結のあいだ。</p>
+              <p class="history">1919年 アルコックとブラウン／1927年 リンドバーグ</p>
+            </article>
+            <article class="course hard">
+              <p class="level" aria-label="難しさ 3">★★★</p>
+              <h3>はるか海を渡り 山脈を越える</h3>
+              <p>長い海のあとに 3400 m の峠。プロペラは旅のあいだ替えられない。どちらに合わせる？</p>
+              <p class="history">1930年 メルモーズ／ギヨメ</p>
+            </article>
+          </div>
+
+          <figure class="shot wide"><img src="img/courses.jpg" alt="コースを選ぶ画面。コースごとの地図と、すぐ飛ぶ・格納庫で準備のボタン" loading="lazy" width="1440" height="900" /></figure>
+        </div>
+      </section>
+
+      <!-- ===== 評価・記録 ===== -->
+      <section class="section score">
+        <div class="wrap">
+          <p class="eyebrow">SCORE</p>
+          <h2><span class="nb">着いたら、</span><span class="nb">4つの目で評価される</span></h2>
+          <div class="score-grid">
+            <div class="score-item"><b>日数</b><span>何日目に着いたか</span></div>
+            <div class="score-item"><b>燃費</b><span>1 L で何 km 飛んだか</span></div>
+            <div class="score-item"><b>機体の状態</b><span>着いたときの傷み</span></div>
+            <div class="score-item"><b>安全な判断</b><span>予備燃料・引き返す・待つ・整備</span></div>
+          </div>
+          <p class="ranks">各25点・100点満点　<span class="rank s">S</span> 85点以上　<span class="rank a">A</span> 70点以上　<span class="rank b">B</span> 50点以上</p>
+
+          <div class="lessons">
+            <h3>旅の終わりにふり返る「4つの学び」</h3>
+            <ol>
+              <li>プロペラは一つですべてに最適にはならない</li>
+              <li>木は湿気で変わる</li>
+              <li>遠くへ飛ぶ鍵は、速さより燃費と風</li>
+              <li>一番大事なのは、引き返す勇気</li>
+            </ol>
+          </div>
+
+          <p class="more">コースごとの<b>自己ベスト</b>と、題名が「？？？」で伏せられた<b>10個の実績</b>。「大洋を越えた」で増設タンクが使えるように。</p>
+        </div>
+      </section>
+
+      <!-- ===== 遊び方 ===== -->
+      <section class="section howto" id="howto">
+        <div class="wrap">
+          <p class="eyebrow">HOW TO PLAY</p>
+          <h2>遊び方</h2>
+
+          <ol class="flow">
+            <li><span>1</span>コースを選ぶ</li>
+            <li><span>2</span>格納庫で準備</li>
+            <li><span>3</span>区間を飛ぶ</li>
+            <li><span>4</span>経由地で整備・給油</li>
+            <li><span>5</span>目的地で評価</li>
+          </ol>
+          <p class="note">すぐに飛びたい人は、コースの「すぐ飛ぶ」で整備士のおすすめセッティングのまま離陸できます。</p>
+
+          <div class="keys">
+            <table>
+              <caption>キーボード操作</caption>
+              <tbody>
+                <tr><th><kbd>W</kbd> <kbd>S</kbd>（<kbd>↑</kbd> <kbd>↓</kbd>）</th><td>スロットル</td></tr>
+                <tr><th><kbd>A</kbd> <kbd>D</kbd>（<kbd>←</kbd> <kbd>→</kbd>）</th><td>ミクスチャー（D で薄く）</td></tr>
+                <tr><th><kbd>R</kbd> <kbd>F</kbd></th><td>目標高度 ±100 m</td></tr>
+                <tr><th><kbd>Q</kbd> <kbd>E</kbd></th><td>左右によける</td></tr>
+                <tr><th><kbd>H</kbd></th><td>キャブレターヒート</td></tr>
+                <tr><th><kbd>P</kbd></th><td>気象ラジオで予報を更新</td></tr>
+                <tr><th><kbd>U</kbd></th><td>引き返す</td></tr>
+                <tr><th><kbd>スペース</kbd></th><td>一時停止</td></tr>
+              </tbody>
+            </table>
+            <div class="diff">
+              <h3>難易度</h3>
+              <dl>
+                <dt>かんたん</dt><dd>混合比とキャブヒートは自動。操作するのは出力・高度・ルート。</dd>
+                <dt>ふつう</dt><dd>ボルト点検の通知だけ自動。ほぼすべてを自分で操作。</dd>
+                <dt>リアル</dt><dd>自動なし。計器は数値だけで、色の目安は出ない。予報の外れも大きい。</dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 最後のCTA ===== -->
+      <section class="final">
+        <div class="final-bg" aria-hidden="true"></div>
+        <div class="wrap">
+          <svg class="final-prop" viewBox="-50 -50 100 100" aria-hidden="true"><g class="blades"><path d="M -5 -4 C -6 -20 -7 -38 -1 -47 C 6 -38 6 -20 5 -4 Z" fill="url(#wood)" /><path d="M -5 4 C -6 20 -7 38 -1 47 C 6 38 6 20 5 4 Z" fill="url(#wood)" /></g><circle r="8" fill="#c9433a" /><circle r="3" cx="-2" cy="-2" fill="#e8806f" /></svg>
+          <h2><span class="nb">さあ、</span><span class="nb">エンジンをかけよう。</span></h2>
+          <p>ブラウザを開くだけ。登録もダウンロードもいりません。</p>
+          <a class="btn primary big" href="https://tamtomozo.github.io/wooden-prop-flight/">ブラウザで遊ぶ<small>無料・PC のブラウザ推奨</small></a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>木製プロペラ長距離飛行</p>
+      <p class="small">コースの地名・地形・登場する土地の人はすべて架空です。もとにした史実の飛行は、コースの雰囲気づくりのための参考です。</p>
+    </footer>
+
+    <!-- 木のプロペラの木目（ページ内のプロペラで共用） -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <linearGradient id="wood" x1="0" x2="1">
+          <stop offset="0" stop-color="#7a4a22" /><stop offset="0.5" stop-color="#c58b52" /><stop offset="1" stop-color="#7a4a22" />
+        </linearGradient>
+      </defs>
+    </svg>
+  </body>
+</html>

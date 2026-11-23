@@ -1,3 +1,5 @@
+import { cpSync } from "node:fs";
+import { resolve } from "node:path";
 import { defineConfig, type Plugin } from "vite";
 
 /**
@@ -31,7 +33,26 @@ function inlineIntoHtml(): Plugin {
   };
 }
 
+/**
+ * ランディングページ（lp/）を dist/lp/ にそのままコピーする。
+ * タイトル画面の「ゲームの紹介ページ」は ./lp/index.html を開くので、
+ * GitHub Pages でも、手元で dist/index.html を開いたときもつながる。
+ */
+function copyLandingPage(): Plugin {
+  let outDir = "dist";
+  return {
+    name: "copy-landing-page",
+    apply: "build",
+    configResolved(config) {
+      outDir = resolve(config.root, config.build.outDir);
+    },
+    closeBundle() {
+      cpSync(resolve(__dirname, "lp"), resolve(outDir, "lp"), { recursive: true });
+    },
+  };
+}
+
 export default defineConfig({
   base: "./",
-  plugins: [inlineIntoHtml()],
+  plugins: [inlineIntoHtml(), copyLandingPage()],
 });

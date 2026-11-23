@@ -29,7 +29,10 @@ export function showTitle(onStart: () => void) {
     <h1>木製プロペラ<br />長距離飛行</h1>
     <p class="title-lead">木のプロペラ機で、海峡・諸島・山脈・大洋を飛びこえる。<br />燃料と天気と、引き返す勇気がすべて。</p>
   </div>
+  <a class="title-lp" href="./lp/index.html">ゲームの紹介ページ</a>
   <p class="title-start">Enter かスペースではじめる</p>`;
+  // 紹介ページへのリンクを押したときは、ゲームをはじめずにリンク先へ進む
+  title.querySelector<HTMLAnchorElement>(".title-lp")!.addEventListener("click", (e) => e.stopPropagation());
 
   const leave = () => {
     hideTitle();
@@ -38,6 +41,8 @@ export function showTitle(onStart: () => void) {
   removeListeners();
   onKey = (e) => {
     if (e.key !== "Enter" && e.key !== " ") return;
+    // Tab でリンクを選んで Enter を押したときは、リンクを開く
+    if (e.target instanceof HTMLAnchorElement) return;
     e.preventDefault();
     leave();
   };

@@ -1081,6 +1081,23 @@ button { font: inherit; }
   animation: title-blink 1.8s ease-in-out infinite;
 }
 @keyframes title-blink { 50% { opacity: 0.35; } }
+/* 右上の「ゲームの紹介ページ」（lp/ のランディングページへ） */
+.title-lp {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  background: rgba(10, 12, 15, 0.35);
+  color: #fff;
+  font-size: 0.85rem;
+  text-decoration: none;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+.title-lp::after { content: " →"; color: var(--accent); }
+.title-lp:hover { background: rgba(10, 12, 15, 0.6); border-color: var(--accent); }
+.title-lp:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .title-prop .blades, .title-start { animation: none; }
 }
