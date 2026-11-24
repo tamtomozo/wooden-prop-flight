@@ -435,7 +435,7 @@ function startAttract() {
 function goTitle() {
   startAttract();
   closeDialog();
-  showTitle(chooseCourse);
+  showTitle(chooseCourse, progress);
 }
 
 function chooseCourse() {
@@ -730,8 +730,16 @@ function frame(now: number) {
   sound.update(flight, active);
   backScene?.draw(flight, realDt, active || attract);
   routeBar.draw(flight);
+  // 最初の景色を描き終えてから画面を見せる（index.html で隠してある）
+  if (!revealed) {
+    revealed = true;
+    $("#app").classList.add("ready");
+  }
   requestAnimationFrame(frame);
 }
+let revealed = false;
 
 goTitle();
 requestAnimationFrame(frame);
+// 景色の描画でつまずいても、画面が隠れたままにならないように
+setTimeout(() => $("#app").classList.add("ready"), 3000);

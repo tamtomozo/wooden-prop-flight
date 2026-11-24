@@ -37,8 +37,13 @@ export const fmtDuration = (min: number) => {
     : tr(`${m}分`, `${m} min`);
 };
 
+/** 整備士の名前（ひとことの名札・クレジットに出す） */
+export const MECHANIC_NAME = tr("ゲンさん", "Gen");
+/** ひとことの名札：「整備士 ゲンさん」 */
+export const MECHANIC_TAG = tr(`整備士 ${MECHANIC_NAME}`, `Mechanic ${MECHANIC_NAME}`);
+
 export const mechanicLine = (text: string) =>
-  `<p class="mechanic"><span class="who">${tr("整備士", "Mechanic")}</span><span>${text}</span></p>`;
+  `<p class="mechanic"><span class="who">${MECHANIC_TAG}</span><span>${text}</span></p>`;
 
 /** 土地の人のうわさ（整備士のひとことと並べて、色を変えて出す）。about は「◯◯への道」など、何のうわさか */
 export const rumorsHtml = (rs: Rumor[], about: string) =>
