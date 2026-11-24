@@ -55,6 +55,8 @@ const DIAL_R = 0.43;
 
 export class RoundGauge {
   private face = document.createElement("canvas");
+  /** 針の上に重ねるガラスの映り込み（これも一度だけ描いてとっておく） */
+  private glass = document.createElement("canvas");
   private ctx: CanvasRenderingContext2D;
   private size = 0;
   private dpr = 1;
@@ -92,11 +94,12 @@ export class RoundGauge {
     if (!size || (size === this.size && dpr === this.dpr)) return;
     this.size = size;
     this.dpr = dpr;
-    for (const c of [this.canvas, this.face]) {
+    for (const c of [this.canvas, this.face, this.glass]) {
       c.width = Math.round(size * dpr);
       c.height = Math.round(size * dpr);
     }
     this.drawFace();
+    this.drawGlass();
   }
 
   private drawFace() {
@@ -263,8 +266,19 @@ export class RoundGauge {
     g.arc(c, c, r * 0.045, 0, Math.PI * 2);
     g.fill();
 
-    // ガラスの映り込み（文字盤の内側だけ）
-    g.save();
+    // ガラスの映り込み（とっておいたものを重ねる）
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(this.glass, 0, 0);
+  }
+
+  /** ガラスの映り込み（文字盤の内側だけ）。針の上に重ねる */
+  private drawGlass() {
+    const g = this.glass.getContext("2d")!;
+    const s = this.size;
+    const c = s / 2;
+    const r = s * DIAL_R;
+    g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    g.clearRect(0, 0, s, s);
     g.beginPath();
     g.arc(c, c, r, 0, Math.PI * 2);
     g.clip();
@@ -275,6 +289,5 @@ export class RoundGauge {
     g.beginPath();
     g.ellipse(c - r * 0.25, c - r * 0.35, r * 0.75, r * 0.45, -Math.PI / 4, 0, Math.PI * 2);
     g.fill();
-    g.restore();
   }
 }

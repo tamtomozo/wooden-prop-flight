@@ -1,11 +1,13 @@
 // 機体を後ろから追いかける3Dの視点（Three.js）。
 // 見た目用の世界なので、高度や距離の縮尺は実際の値とは合わせていない。
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { DETOUR_ANGLE, DISORIENT_LIMIT_MIN } from "../config";
 import { seaAt } from "../data/world";
 import { groundElevation, terrainAt, type FlightState } from "../game/flight";
 import type { Leg, LegWeather, RunwaySurface } from "../model/types";
 import { elementSize, type ElementSize } from "./dom";
+import { AdaptiveResolution } from "./resolution";
 import { skyAt, type RGB } from "./sky";
 
 /** 雲を置く高さの基準（見た目用。巡航中の機体はだいたいこの高さ） */
@@ -29,7 +31,35 @@ const SEA_TILE = 260;
 /** 1区間の中の、海の上の範囲の数の上限（これより多いぶんは描かない） */
 const SEA_MAX = 4;
 
-const color = (c: RGB) => new THREE.Color().setRGB(c[0] / 255, c[1] / 255, c[2] / 255, THREE.SRGBColorSpace);
+/** 毎フレーム新しい Color を作らないよう、色は今ある Color に書き込む */
+const setColor = (target: THREE.Color, c: RGB) => target.setRGB(c[0] / 255, c[1] / 255, c[2] / 255, THREE.SRGBColorSpace);
+const WHITE = new THREE.Color(0xffffff);
+/** 雨や厚い雲の下の、灰色の空 */
+const GLOOM_GRAY = new THREE.Color(0x7d848c);
+// 毎フレームの行列計算に使い回す入れ物
+const _m = new THREE.Matrix4();
+const _p = new THREE.Vector3();
+const _s = new THREE.Vector3();
+const NO_ROTATION = new THREE.Quaternion();
+
+/** 道筋の左右に並べる山1つ（形はまとめて描く：InstancedMesh） */
+interface Hill {
+  mesh: THREE.InstancedMesh;
+  index: number;
+  x: number;
+  y: number;
+  z: number;
+  height: number;
+  radius: number;
+  rot: THREE.Quaternion;
+  visible: boolean;
+}
+
+/** 雲1つ（ふくらみ3〜5個）。ふくらみは全部の雲でまとめて描く */
+interface Cloud {
+  pos: THREE.Vector3;
+  puffs: { offset: THREE.Vector3; scale: THREE.Vector3 }[];
+}
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const lambert = (hex: number, extra: THREE.MeshLambertMaterialParameters = {}) =>
   new THREE.MeshLambertMaterial({ color: hex, flatShading: true, ...extra });
@@ -50,10 +80,13 @@ export class BackScene {
   private plane = new THREE.Group();
   private prop = new THREE.Group();
   private propDisc: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>;
-  private hills: THREE.Mesh[] = [];
+  private hills: Hill[] = [];
+  /** 山の形（角の数 6・7・8 ごとに1つ） */
+  private hillMeshes: THREE.InstancedMesh[] = [];
   /** 海の上の範囲ごとの海面（地面の少し上に重ねる） */
   private seas: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>[] = [];
-  private clouds: THREE.Group[] = [];
+  private clouds: Cloud[] = [];
+  private cloudPuffs: THREE.InstancedMesh;
   /** 雲は後ろ側（影の側）から見ることが多いので、空の色で少し自分で光らせる */
   private cloudMat = lambert(0xffffff, { transparent: true, opacity: 0.94 });
   private streakPos: Float32Array;
@@ -69,11 +102,17 @@ export class BackScene {
   private h = 0;
   /** 画面の上での景色の大きさ（変わったときだけ更新される） */
   private cssSize: ElementSize;
+  /** 解像度（ピクセル比）の自動調整。遅いパソコンでは景色を少し粗くして滑らかに動かす */
+  private res: AdaptiveResolution;
+  private resMax = 0;
+  private lastDraw = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.cssSize = elementSize(canvas);
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    this.resMax = Math.min(2, window.devicePixelRatio || 1);
+    this.res = new AdaptiveResolution(this.resMax);
+    this.renderer.setPixelRatio(this.res.ratio);
     this.scene.fog = this.fog;
 
     // 空：上と地平線の2色のグラデーション。カメラについてくる大きな球
@@ -141,36 +180,59 @@ export class BackScene {
     }
 
     // 山：飛ぶ道筋の左右に並べる
+    // 80個を1つずつ描くと重いので、角の数ごとにまとめて描く。色は1つずつ（instanceColor）
+    const HILLS = 80;
     const hillColors = [0x4f7a46, 0x5d8a4e, 0x6b8f5a, 0x7a8f6a, 0x8a9a7a];
-    for (let i = 0; i < 80; i++) {
-      const height = rand(40, 170);
-      const hill = new THREE.Mesh(
-        new THREE.ConeGeometry(rand(110, 240), height, 6 + (i % 3)),
-        lambert(hillColors[i % hillColors.length]),
-      );
-      hill.position.set(this.sideX(HILL_MIN_X, 1800), height / 2 - 2, rand(-FAR - 300, NEAR_EDGE));
-      hill.rotation.y = rand(0, Math.PI);
-      this.hills.push(hill);
-      this.scene.add(hill);
+    const hillMat = lambert(0xffffff);
+    for (let k = 0; k < 3; k++) {
+      const mesh = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 6 + k), hillMat, Math.ceil((HILLS - k) / 3));
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      // 山は1つずつ動くので、まとめた範囲で「画面の外なら描かない」の判定はしない
+      mesh.frustumCulled = false;
+      this.hillMeshes.push(mesh);
+      this.scene.add(mesh);
     }
+    const tint = new THREE.Color();
+    for (let i = 0; i < HILLS; i++) {
+      const height = rand(40, 170);
+      const mesh = this.hillMeshes[i % 3];
+      const index = Math.floor(i / 3);
+      mesh.setColorAt(index, tint.setHex(hillColors[i % hillColors.length]));
+      this.hills.push({
+        mesh,
+        index,
+        x: this.sideX(HILL_MIN_X, 1800),
+        y: height / 2 - 2,
+        z: rand(-FAR - 300, NEAR_EDGE),
+        height,
+        radius: rand(110, 240),
+        rot: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand(0, Math.PI)),
+        visible: true,
+      });
+    }
+    this.updateHills();
 
     // 雲
-    const cloudMat = this.cloudMat;
-    const puff = new THREE.IcosahedronGeometry(1, 1);
+    let puffCount = 0;
     for (let i = 0; i < 26; i++) {
-      const c = new THREE.Group();
       const n = 3 + (i % 3);
+      const c: Cloud = { pos: new THREE.Vector3(), puffs: [] };
       for (let k = 0; k < n; k++) {
-        const m = new THREE.Mesh(puff, cloudMat);
         const r = rand(9, 18);
-        m.scale.set(r * 1.4, r, r);
-        m.position.set((k - n / 2) * 14 + rand(-4, 4), rand(-3, 5), rand(-6, 6));
-        c.add(m);
+        c.puffs.push({
+          offset: new THREE.Vector3((k - n / 2) * 14 + rand(-4, 4), rand(-3, 5), rand(-6, 6)),
+          scale: new THREE.Vector3(r * 1.4, r, r),
+        });
       }
+      puffCount += n;
       this.placeCloud(c, rand(-FAR, NEAR_EDGE));
       this.clouds.push(c);
-      this.scene.add(c);
     }
+    this.cloudPuffs = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), this.cloudMat, puffCount);
+    this.cloudPuffs.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.cloudPuffs.frustumCulled = false;
+    this.scene.add(this.cloudPuffs);
+    this.updateClouds();
 
     // 風の筋：機体のまわりを後ろへ流れる線
     const N = 70;
@@ -189,7 +251,28 @@ export class BackScene {
     this.arrRunway = new Runway(this.scene);
     this.wx = new WeatherLayer(this.scene);
     this.propDisc = this.buildPlane();
+    // 機体の部品（約40個）は動かないので、材質ごとに1つの形にまとめて描く回数を減らす
+    mergeStaticParts(this.plane, [this.prop, this.propDisc]);
     this.scene.add(this.plane);
+  }
+
+  /** 山の位置を描く形へ書き込む（見えない山は大きさ 0） */
+  private updateHills() {
+    for (const hill of this.hills) {
+      _p.set(hill.x, hill.y, hill.z);
+      if (hill.visible) _s.set(hill.radius, hill.height, hill.radius);
+      else _s.set(0, 0, 0);
+      hill.mesh.setMatrixAt(hill.index, _m.compose(_p, hill.rot, _s));
+    }
+    for (const mesh of this.hillMeshes) mesh.instanceMatrix.needsUpdate = true;
+  }
+
+  /** 雲のふくらみの位置を描く形へ書き込む */
+  private updateClouds() {
+    let i = 0;
+    for (const c of this.clouds)
+      for (const puff of c.puffs) this.cloudPuffs.setMatrixAt(i++, _m.compose(_p.copy(c.pos).add(puff.offset), NO_ROTATION, puff.scale));
+    this.cloudPuffs.instanceMatrix.needsUpdate = true;
   }
 
   /** 道筋（x=0）から min〜max 離れた左右どちらかの x */
@@ -197,9 +280,9 @@ export class BackScene {
     return (Math.random() < 0.5 ? -1 : 1) * rand(min, max);
   }
 
-  private placeCloud(c: THREE.Group, z: number) {
+  private placeCloud(c: Cloud, z: number) {
     // 道筋のすぐ近くには置かない（雲に入るのはステップ3で作る）
-    c.position.set(this.sideX(70, 900), rand(ALT - 40, ALT + 140), z);
+    c.pos.set(this.sideX(70, 900), rand(ALT - 40, ALT + 140), z);
   }
 
   private placeStreak(i: number, z: number) {
@@ -316,6 +399,20 @@ export class BackScene {
     return disc;
   }
 
+  /** 前のフレームからの時間で、解像度を上げ下げする（resolution.ts） */
+  private adaptResolution() {
+    const now = performance.now();
+    const dt = this.lastDraw ? now - this.lastDraw : 0;
+    this.lastDraw = now;
+    // 別の画面へウィンドウを動かして、画面の細かさが変わったら最初から
+    const max = Math.min(2, window.devicePixelRatio || 1);
+    if (max !== this.resMax) {
+      this.resMax = max;
+      this.res = new AdaptiveResolution(max);
+      this.renderer.setPixelRatio(this.res.ratio);
+    } else if (this.res.sample(dt)) this.renderer.setPixelRatio(this.res.ratio);
+  }
+
   private fit() {
     const { w, h } = this.cssSize;
     if (!w || !h || (w === this.w && h === this.h)) return;
@@ -327,6 +424,7 @@ export class BackScene {
   }
 
   draw(s: FlightState, realDt: number, running: boolean) {
+    this.adaptResolution();
     this.fit();
     // 大きさがまだわからない（最初のフレーム）か、隠れているときは描かない
     if (!this.w) return;
@@ -342,25 +440,25 @@ export class BackScene {
 
     // 空と光：時刻に合わせて夕焼けから夜へ
     const sky = skyAt(s);
-    this.skyMat.uniforms.topColor.value.copy(color(sky.top));
-    this.skyMat.uniforms.bottomColor.value.copy(color(sky.bottom));
-    this.fog.color.copy(color(sky.bottom));
-    const sunColor = color(sky.sunColor);
-    this.sun.material.color.copy(sunColor);
-    this.dir.color.copy(new THREE.Color(0xffffff).lerp(sunColor, sky.dusk));
+    const top: THREE.Color = this.skyMat.uniforms.topColor.value;
+    const bottom: THREE.Color = this.skyMat.uniforms.bottomColor.value;
+    setColor(top, sky.top);
+    setColor(bottom, sky.bottom);
+    this.fog.color.copy(bottom);
+    const sunColor = setColor(this.sun.material.color, sky.sunColor);
+    this.dir.color.copy(WHITE).lerp(sunColor, sky.dusk);
     const light = 1 - 0.75 * sky.night;
     this.dir.intensity = 2.2 * light * (1 - 0.35 * sky.dusk);
     this.hemi.intensity = 1.6 * light;
-    this.hemi.color.copy(color(sky.top)).lerp(new THREE.Color(0xffffff), 0.5);
-    this.cloudMat.emissive.copy(color(sky.bottom)).multiplyScalar(0.55 * light);
+    this.hemi.color.copy(top).lerp(WHITE, 0.5);
+    this.cloudMat.emissive.copy(bottom).multiplyScalar(0.55 * light);
 
     // 雨や厚い雲の下では空が灰色になり、遠くが見えにくい。雲の中は真っ白
     const e = s.env;
     const gloom = Math.min(1, (e.overcast ? 0.45 : 0) + e.rain * 0.15);
-    const gray = new THREE.Color(0x7d848c);
-    this.skyMat.uniforms.topColor.value.lerp(gray, gloom);
-    this.skyMat.uniforms.bottomColor.value.lerp(gray, gloom * 0.8);
-    this.fog.color.lerp(gray, gloom * 0.8);
+    top.lerp(GLOOM_GRAY, gloom);
+    bottom.lerp(GLOOM_GRAY, gloom * 0.8);
+    this.fog.color.lerp(GLOOM_GRAY, gloom * 0.8);
     this.dir.intensity *= 1 - gloom * 0.6;
     this.sun.visible = gloom < 0.3;
     if (e.inCloud) {
@@ -380,16 +478,17 @@ export class BackScene {
       const a = Math.max(0, p.airspeed) * SPEED_SCALE * realDt;
       this.groundTex.offset.y = (this.groundTex.offset.y + (g * GROUND_REPEAT) / GROUND_SIZE) % 1;
       for (const hill of this.hills) {
-        hill.position.z += g;
-        if (hill.position.z > NEAR_EDGE) {
-          hill.position.z -= SPAN;
-          hill.position.x = this.sideX(HILL_MIN_X, 1800);
+        hill.z += g;
+        if (hill.z > NEAR_EDGE) {
+          hill.z -= SPAN;
+          hill.x = this.sideX(HILL_MIN_X, 1800);
         }
       }
       for (const c of this.clouds) {
-        c.position.z += a;
-        if (c.position.z > NEAR_EDGE) this.placeCloud(c, c.position.z - SPAN);
+        c.pos.z += a;
+        if (c.pos.z > NEAR_EDGE) this.placeCloud(c, c.pos.z - SPAN);
       }
+      this.updateClouds();
       for (let i = 0; i < this.streakPos.length / 6; i++) {
         this.streakPos[i * 6 + 2] += a * 1.6;
         this.streakPos[i * 6 + 5] += a * 1.6;
@@ -427,7 +526,8 @@ export class BackScene {
       tex.repeat.set(GROUND_SIZE / SEA_TILE, (h * len) / SEA_TILE);
       tex.offset.set((this.t * 0.01) % 1, ((((s.distanceFlown * KM - h * zNear) / SEA_TILE) % 1) + 1) % 1);
     });
-    for (const hill of this.hills) hill.visible = !seaAt(s.leg, s.distanceFlown - (h * hill.position.z) / KM);
+    for (const hill of this.hills) hill.visible = !seaAt(s.leg, s.distanceFlown - (h * hill.z) / KM);
+    this.updateHills();
 
     // 実際の天気（雲・雨のカーテン・積乱雲・雨粒）
     this.wx.update(s, realDt, running, this.camera.position);
@@ -467,6 +567,29 @@ export class BackScene {
     this.sun.position.set(-1500, -60 + sky.sunHeight * 900, -2600);
 
     this.renderer.render(this.scene, this.camera);
+  }
+}
+
+/**
+ * group の直接の子の Mesh を、材質ごとに1つの形へまとめる（keep に入れたものは残す）。
+ * 位置・向き・大きさは形の頂点に焼き込むので、まとめた後も見た目は同じ
+ */
+function mergeStaticParts(group: THREE.Group, keep: THREE.Object3D[]) {
+  const byMaterial = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  for (const child of [...group.children]) {
+    if (keep.includes(child) || !(child instanceof THREE.Mesh) || Array.isArray(child.material)) continue;
+    child.updateMatrix();
+    const geo = (child.geometry as THREE.BufferGeometry).clone().applyMatrix4(child.matrix);
+    const list = byMaterial.get(child.material);
+    if (list) list.push(geo);
+    else byMaterial.set(child.material, [geo]);
+    group.remove(child);
+    child.geometry.dispose();
+  }
+  for (const [material, geos] of byMaterial) {
+    const merged = mergeGeometries(geos);
+    for (const g of geos) g.dispose();
+    if (merged) group.add(new THREE.Mesh(merged, material));
   }
 }
 
