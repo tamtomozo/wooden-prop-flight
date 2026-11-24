@@ -11,6 +11,8 @@ import { elementSize, type ElementSize } from "./dom";
 const MAP_SHARE = 0.54;
 const LAT_RANGE = 60; // 地図の上下 ±60 km
 const PAD = 54;
+/** 見た目の変わらないフレームでも、この間隔（ms）では描き直す */
+const REDRAW_MS = 250;
 
 const COLORS = {
   cloud: "rgba(200,205,215,",
@@ -36,16 +38,18 @@ export class RouteBar {
     this.cssSize = elementSize(canvas);
   }
 
-  private fit() {
+  /** 大きさが変わって canvas を作り直したら true */
+  private fit(): boolean {
     const { w, h } = this.cssSize;
     const dpr = window.devicePixelRatio || 1;
-    if (w === this.w && h === this.h && dpr === this.dpr) return;
+    if (w === this.w && h === this.h && dpr === this.dpr) return false;
     this.w = w;
     this.h = h;
     this.dpr = dpr;
     this.canvas.width = Math.round(w * dpr);
     this.canvas.height = Math.round(h * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return true;
   }
 
   /** 帯の高さに合わせて、地図と断面の高さを決める */
@@ -53,8 +57,39 @@ export class RouteBar {
     return Math.round(this.h * MAP_SHARE);
   }
 
+  /**
+   * 描き直すかどうか。帯全体の描き直しは重いので、毎フレームは描かない。
+   * 機体の印が 1 ピクセル動いたときと、操作で見た目が変わったときは、すぐ描く。
+   * 天気を確かめた・燃料の届く距離が変わった などは、REDRAW_MS ごとの描き直しで追いつく
+   */
+  private needsRedraw(s: FlightState, resized: boolean): boolean {
+    const now = performance.now();
+    const span = this.w - PAD * 2;
+    const MAP_H = this.mapH;
+    const key = [
+      Math.round((span * s.distanceFlown) / s.leg.distanceKm),
+      Math.round((s.lateral / LAT_RANGE) * (MAP_H / 2 - 12)),
+      Math.round((s.altitude / MAX_ALTITUDE) * (this.h - MAP_H - 12)),
+      s.leg.from.id,
+      s.leg.to.id,
+      s.status,
+      s.returning,
+      s.approach,
+      s.pastNoReturn,
+      s.lateralTarget,
+      s.controls.targetAltitude,
+    ].join("|");
+    if (!resized && key === this.drawnKey && now - this.drawnAt < REDRAW_MS) return false;
+    this.drawnKey = key;
+    this.drawnAt = now;
+    return true;
+  }
+  private drawnKey = "";
+  private drawnAt = 0;
+
   draw(s: FlightState) {
-    this.fit();
+    const resized = this.fit();
+    if (!this.w || !this.needsRedraw(s, resized)) return;
     const MAP_H = this.mapH;
     const { ctx, w } = this;
     ctx.fillStyle = "#20252b";

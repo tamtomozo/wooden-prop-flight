@@ -52,6 +52,10 @@ const FLAG_FONT = 0.18;
 const NUMBER_R = 0.64;
 /** 文字盤の半径（÷ 計器の大きさ）。draw でも同じ値を使う */
 const DIAL_R = 0.43;
+/** 針がこれ（ラジアン）より動いたら描き直す。0.002 は半径50ピクセルの針の先で 0.1 ピクセル */
+const NEEDLE_STEP = 0.002;
+/** 針が震えているときに描き直す回数（1秒あたり） */
+const JITTER_FPS = 30;
 
 export class RoundGauge {
   private face = document.createElement("canvas");
@@ -65,6 +69,11 @@ export class RoundGauge {
   private plain = false;
   /** 画面の上での計器の大きさ（変わったときだけ更新される） */
   private cssSize: ElementSize;
+  /** 最後に描いた針の角度と文字。目に見えて変わらなければ描き直さない（NaN なら必ず描く） */
+  private drawnAngle = NaN;
+  private drawnText = "";
+  private drawnAt = 0;
+  private drawnJitter = false;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -100,6 +109,7 @@ export class RoundGauge {
     }
     this.drawFace();
     this.drawGlass();
+    this.drawnAngle = NaN;
   }
 
   private drawFace() {
@@ -210,6 +220,23 @@ export class RoundGauge {
     this.shown = this.shown === null ? value : this.shown + (value - this.shown) * 0.2;
     const v = this.shown + (extras.jitter ? (Math.random() - 0.5) * extras.jitter : 0);
 
+    // 針も文字も目に見えて変わらないなら、前に描いたままにする（2D の描き直しは重い）。
+    // 震えは でたらめな揺れなので、1秒に JITTER_FPS 回描けば毎フレーム描くのと見分けがつかない
+    const now = performance.now();
+    const base = this.angle(this.shown);
+    const text = `${extras.readout ?? ""}|${extras.flag?.text ?? ""}|${extras.flag?.color ?? ""}`;
+    const jitter = !!extras.jitter;
+    const moved = text !== this.drawnText || !(Math.abs(base - this.drawnAngle) < NEEDLE_STEP);
+    const shiver = jitter && now - this.drawnAt >= 1000 / JITTER_FPS;
+    // 震えが止まったら、震えていない位置に1回描き直す
+    const settled = !jitter && this.drawnJitter;
+    if (!moved && !shiver && !settled) return;
+    this.drawnAngle = base;
+    this.drawnText = text;
+    this.drawnAt = now;
+    this.drawnJitter = jitter;
+    const a = this.angle(v);
+
     const g = this.ctx;
     const s = this.size;
     const c = s / 2;
@@ -239,7 +266,6 @@ export class RoundGauge {
     }
 
     // 針
-    const a = this.angle(v);
     g.save();
     g.translate(c, c);
     g.rotate(a);
