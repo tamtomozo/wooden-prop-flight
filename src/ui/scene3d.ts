@@ -5,6 +5,7 @@ import { DETOUR_ANGLE, DISORIENT_LIMIT_MIN } from "../config";
 import { seaAt } from "../data/world";
 import { groundElevation, terrainAt, type FlightState } from "../game/flight";
 import type { Leg, LegWeather, RunwaySurface } from "../model/types";
+import { elementSize, type ElementSize } from "./dom";
 import { skyAt, type RGB } from "./sky";
 
 /** 雲を置く高さの基準（見た目用。巡航中の機体はだいたいこの高さ） */
@@ -66,8 +67,11 @@ export class BackScene {
   private pitchShown = 0;
   private w = 0;
   private h = 0;
+  /** 画面の上での景色の大きさ（変わったときだけ更新される） */
+  private cssSize: ElementSize;
 
-  constructor(private canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement) {
+    this.cssSize = elementSize(canvas);
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     this.scene.fog = this.fog;
@@ -313,8 +317,7 @@ export class BackScene {
   }
 
   private fit() {
-    const w = this.canvas.clientWidth;
-    const h = this.canvas.clientHeight;
+    const { w, h } = this.cssSize;
     if (!w || !h || (w === this.w && h === this.h)) return;
     this.w = w;
     this.h = h;
@@ -325,6 +328,8 @@ export class BackScene {
 
   draw(s: FlightState, realDt: number, running: boolean) {
     this.fit();
+    // 大きさがまだわからない（最初のフレーム）か、隠れているときは描かない
+    if (!this.w) return;
     this.t += realDt;
     const p = s.perf;
     const rough = p.mixture.zone === "tooLean" && s.status === "flying";
@@ -622,10 +627,24 @@ class WeatherLayer {
     this.rainPos.set([x, y, z, x - 0.3, y - 3, z + 1.5], i * 6);
   }
 
+  /**
+   * 前の区間の雲・雨・山を片づける。形（ジオメトリ）は区間ごとに作っているので、
+   * 画面から外すだけでなく GPU のメモリも返す。材質はずっと使い回すので残す
+   */
+  private clear() {
+    const geometries = new Set<THREE.BufferGeometry>();
+    this.root.traverse((o) => {
+      if (o instanceof THREE.Mesh) geometries.add(o.geometry);
+      if (o instanceof THREE.InstancedMesh) o.dispose();
+    });
+    for (const g of geometries) g.dispose();
+    this.root.clear();
+  }
+
   /** 天気が変わったら（区間が変わったら）作り直す */
   private build(w: LegWeather, leg: Leg) {
     this.built = w;
-    for (const c of [...this.root.children]) this.root.remove(c);
+    this.clear();
     const yAt = (alt: number) => 6 + alt * 0.075;
     const puff = new THREE.IcosahedronGeometry(1, 1);
 

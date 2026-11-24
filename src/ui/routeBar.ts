@@ -5,6 +5,7 @@ import { destination, distanceLeft, knownState, noReturnKm, terrainAt, type Flig
 import type { Area, ForecastItem } from "../model/types";
 import { itemArea } from "../model/weather";
 import { tr } from "../i18n";
+import { elementSize, type ElementSize } from "./dom";
 
 /** 上の「地図」が帯の高さに占める割合（残りが下の「断面」） */
 const MAP_SHARE = 0.54;
@@ -26,18 +27,22 @@ export class RouteBar {
   private ctx: CanvasRenderingContext2D;
   private w = 0;
   private h = 0;
+  private dpr = 1;
+  /** 画面の上での帯の大きさ（変わったときだけ更新される） */
+  private cssSize: ElementSize;
 
   constructor(private canvas: HTMLCanvasElement) {
     this.ctx = canvas.getContext("2d")!;
+    this.cssSize = elementSize(canvas);
   }
 
   private fit() {
-    const w = this.canvas.clientWidth;
-    const h = this.canvas.clientHeight;
+    const { w, h } = this.cssSize;
     const dpr = window.devicePixelRatio || 1;
-    if (w === this.w && h === this.h) return;
+    if (w === this.w && h === this.h && dpr === this.dpr) return;
     this.w = w;
     this.h = h;
+    this.dpr = dpr;
     this.canvas.width = Math.round(w * dpr);
     this.canvas.height = Math.round(h * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

@@ -49,6 +49,7 @@ import { inspectionHtml } from "./ui/inspection";
 import { showHangar } from "./ui/hangar";
 import { CockpitPanel, fmtClock, PHASE_LABEL } from "./ui/panel";
 import { RouteBar } from "./ui/routeBar";
+import { setHtml, setText } from "./ui/dom";
 import { BackScene } from "./ui/scene3d";
 import { Sound } from "./ui/sound";
 import { showWaypoint, type ArrivalInfo } from "./ui/waypoint";
@@ -157,13 +158,14 @@ for (const ev of ["pointerdown", "keydown"]) window.addEventListener(ev, () => s
 
 function updateHud() {
   const f = flight;
-  $("#route").innerHTML = `${f.leg.from.name}<span class="arrow">→</span>${f.leg.to.name}`;
-  $("#clock").textContent = fmtClock(campaign && !running && isDialogShowingField() ? campaign.clockMin : clockMin(f));
-  $("#day").textContent = tr(`${campaign?.day ?? 1}日目`, `Day ${campaign?.day ?? 1}`);
+  // 毎フレーム呼ばれるので、変わったところだけ書き換える（dom.ts）
+  setHtml($("#route"), `${f.leg.from.name}<span class="arrow">→</span>${f.leg.to.name}`);
+  setText($("#clock"), fmtClock(campaign && !running && isDialogShowingField() ? campaign.clockMin : clockMin(f)));
+  setText($("#day"), tr(`${campaign?.day ?? 1}日目`, `Day ${campaign?.day ?? 1}`));
   const w = Math.round(f.env.headwind);
-  $("#hud-wind").textContent = w >= 0 ? tr(`向かい風 ${w} km/h`, `Headwind ${w} km/h`) : tr(`追い風 ${-w} km/h`, `Tailwind ${-w} km/h`);
-  $("#hud-alt").textContent = `${tr("高度", "Alt")} ${Math.round(f.altitude)} m${tr("・", " · ")}${f.holding ? tr("霧で待機中", "Holding for fog") : f.returning ? tr("引き返し中", "Turning back") : PHASE_LABEL[f.phase]}`;
-  $("#hud-oat").textContent = tr(`外気温 ${Math.round(f.env.temp)}℃`, `OAT ${Math.round(f.env.temp)}°C`);
+  setText($("#hud-wind"), w >= 0 ? tr(`向かい風 ${w} km/h`, `Headwind ${w} km/h`) : tr(`追い風 ${-w} km/h`, `Tailwind ${-w} km/h`));
+  setText($("#hud-alt"), `${tr("高度", "Alt")} ${Math.round(f.altitude)} m${tr("・", " · ")}${f.holding ? tr("霧で待機中", "Holding for fog") : f.returning ? tr("引き返し中", "Turning back") : PHASE_LABEL[f.phase]}`);
+  setText($("#hud-oat"), tr(`外気温 ${Math.round(f.env.temp)}℃`, `OAT ${Math.round(f.env.temp)}°C`));
   cockpit.update(f, showDetails, running && !paused);
 }
 const isDialogShowingField = () => !$("#overlay").hidden;
@@ -730,14 +732,12 @@ function frame(now: number) {
   sound.update(flight, active);
   backScene?.draw(flight, realDt, active || attract);
   routeBar.draw(flight);
-  // 最初の景色を描き終えてから画面を見せる（index.html で隠してある）
-  if (!revealed) {
-    revealed = true;
-    $("#app").classList.add("ready");
-  }
+  // 最初の景色を描き終えてから画面を見せる（index.html で隠してある）。
+  // 景色や計器の大きさは最初のフレームのあとに届く（dom.ts）ので、2フレーム目で描き終わる
+  if (framesDrawn < 2 && ++framesDrawn === 2) $("#app").classList.add("ready");
   requestAnimationFrame(frame);
 }
-let revealed = false;
+let framesDrawn = 0;
 
 goTitle();
 requestAnimationFrame(frame);

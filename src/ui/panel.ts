@@ -17,6 +17,7 @@ import type { Difficulty } from "../model/types";
 import { distanceToArea, itemArea } from "../model/weather";
 import type { MixtureZone } from "../model/physics";
 import type { Leg } from "../model/types";
+import { setDisabled, setHidden, setOneClass, setStyle, setText } from "./dom";
 import { BLUE, GREEN, RED, RoundGauge, YELLOW } from "./gauge";
 import { tr } from "../i18n";
 
@@ -210,6 +211,7 @@ export class CockpitPanel {
     this.engine.draw(a.engineHealth, { readout: d ? a.engineHealth.toFixed(0) : undefined });
 
     // ---- 警告灯 ----
+    // 毎フレーム呼ばれるので、変わったところだけ書き換える（dom.ts）
     $("#lamp-rough").classList.toggle("on", rough);
     $("#lamp-fuel").classList.toggle("on", fuel <= this.fuelCapacityL * FUEL_LOW);
     $("#lamp-rpm").classList.toggle("on", p.rpm > REDLINE_RPM);
@@ -219,10 +221,10 @@ export class CockpitPanel {
     vib.classList.toggle("amber", a.vibration < VIBRATION_RED);
     // 難易度で出る警告灯：ボルト点検の通知（かんたん・ふつう）、キャブ凍結（かんたんだけ）
     const boltLamp = $("#lamp-bolt");
-    boltLamp.hidden = !this.rule.boltNotice;
+    setHidden(boltLamp, !this.rule.boltNotice);
     boltLamp.classList.toggle("on", this.rule.boltNotice && a.boltTightness < 40);
     const carbLamp = $("#lamp-carb");
-    carbLamp.hidden = !this.rule.carbIceLamp;
+    setHidden(carbLamp, !this.rule.carbIceLamp);
     carbLamp.classList.toggle("on", this.rule.carbIceLamp && a.carbIce > 3);
 
     // ---- 飛行メモ ----
@@ -253,32 +255,32 @@ export class CockpitPanel {
     // 表示は「操縦者がしたつもりの操作」。疲れていると、効くまでに時間がかかる
     const want = intendedControls(s);
     const lat = intendedLateral(s);
-    $("#alt-target").textContent = s.approach ? tr("着陸へ", "Landing") : `${want.targetAltitude} m`;
-    $("#course").textContent = s.courseLocked
+    setText($("#alt-target"), s.approach ? tr("着陸へ", "Landing") : `${want.targetAltitude} m`);
+    setText($("#course"), s.courseLocked
       ? tr("コースへ", "To course")
       : lat === 0
         ? Math.abs(s.lateral) > 1
           ? tr("戻り中", "Returning")
           : tr("まっすぐ", "Straight")
-        : tr(`${lat < 0 ? "左" : "右"} ${Math.abs(lat)} km`, `${Math.abs(lat)} km ${lat < 0 ? "L" : "R"}`);
+        : tr(`${lat < 0 ? "左" : "右"} ${Math.abs(lat)} km`, `${Math.abs(lat)} km ${lat < 0 ? "L" : "R"}`));
     $("#carbheat").classList.toggle("on", want.carbHeat);
-    $("#carb-note").textContent = this.rule.autoCarbHeat ? tr("自動", "Auto") : "H";
-    ($("#carbheat") as HTMLButtonElement).disabled = this.rule.autoCarbHeat || !flying;
-    ($("#mixture") as HTMLInputElement).disabled = this.rule.autoMixture;
+    setText($("#carb-note"), this.rule.autoCarbHeat ? tr("自動", "Auto") : "H");
+    setDisabled($("#carbheat") as HTMLButtonElement, this.rule.autoCarbHeat || !flying);
+    setDisabled($("#mixture") as HTMLInputElement, this.rule.autoMixture);
     const radio = $("#radio") as HTMLButtonElement;
-    radio.disabled = !radioReady(s) || !flying;
-    $("#radio-note").textContent = !s.radio
+    setDisabled(radio, !radioReady(s) || !flying);
+    setText($("#radio-note"), !s.radio
       ? tr("積んでいない", "Not carried")
       : radioReady(s)
         ? tr("予報を更新（P）", "Update forecast (P)")
-        : tr(`あと ${Math.ceil(s.radioReadyAt - s.elapsedMin)} 分`, `in ${Math.ceil(s.radioReadyAt - s.elapsedMin)} min`);
-    ($("#turnback") as HTMLButtonElement).disabled = s.returning || !flying;
+        : tr(`あと ${Math.ceil(s.radioReadyAt - s.elapsedMin)} 分`, `in ${Math.ceil(s.radioReadyAt - s.elapsedMin)} min`));
+    setDisabled($("#turnback") as HTMLButtonElement, s.returning || !flying);
     for (const b of document.querySelectorAll<HTMLButtonElement>(".navbox button"))
-      b.disabled = !flying || s.approach || (b.dataset.nav!.startsWith("alt") ? false : s.courseLocked || s.holding);
+      setDisabled(b, !flying || s.approach || (b.dataset.nav!.startsWith("alt") ? false : s.courseLocked || s.holding));
 
     // ---- レバーと整備士 ----
-    $("#throttle-out").textContent = `${Math.round(want.throttle * 100)}%`;
-    $("#mixture-out").textContent = this.rule.autoMixture ? tr("自動", "Auto") : d ? `${want.mixture}` : "";
+    setText($("#throttle-out"), `${Math.round(want.throttle * 100)}%`);
+    setText($("#mixture-out"), this.rule.autoMixture ? tr("自動", "Auto") : d ? `${want.mixture}` : "");
 
     // ---- 操縦者 ----
     this.pilotMeter("pilot-fatigue", s.pilot.fatigue, tr(["元気", "疲れてきた", "くたくた"], ["Fresh", "Getting tired", "Exhausted"]), d);
@@ -286,31 +288,29 @@ export class CockpitPanel {
     // クリックした計器のひとことを優先して出す。着陸の降下に入ったら、整備士のひとことは出さない
     // （着く先の景色を見せる。計器をクリックしたときだけは出す）
     const pin = this.pinned && performance.now() < this.pinned.until ? this.pinned : null;
-    $("#advice").textContent = pin
+    setText($("#advice"), pin
       ? `【${PARAM_LINES[pin.id].name}】${paramLine(pin.id, s.pilot.haste)}`
       : flying && !s.approach
         ? mechanicAdvice(s)
-        : "";
+        : "");
     this.root.classList.toggle("shake", shake > 0.3);
-    this.root.style.setProperty("--shake", `${Math.min(4, shake).toFixed(2)}px`);
+    setStyle(this.root, "--shake", `${Math.min(4, shake).toFixed(2)}px`);
   }
 
   private pilotMeter(id: string, value: number, words: [string, string, string], details: boolean) {
     const el = $(`#${id}`);
     const level = pilotLevel(value);
-    el.classList.remove("green", "yellow", "red", "plain");
-    el.classList.add(this.rule.plainInstruments ? "plain" : level);
-    (el.querySelector(".st-bar i") as HTMLElement).style.width = `${Math.min(100, value)}%`;
+    setOneClass(el, ["green", "yellow", "red", "plain"], this.rule.plainInstruments ? "plain" : level);
+    setStyle(el.querySelector(".st-bar i") as HTMLElement, "width", `${Math.min(100, value)}%`);
     const word = words[level === "green" ? 0 : level === "yellow" ? 1 : 2];
-    el.querySelector(".pm-word")!.textContent = details ? `${word} ${Math.round(value)}` : word;
+    setText(el.querySelector(".pm-word")!, details ? `${word} ${Math.round(value)}` : word);
   }
 
   private memo(id: string, level: Level | null, value: string, note: string) {
     const row = $(`#${id}`);
-    row.classList.remove("green", "yellow", "red");
-    if (level && !this.rule.plainInstruments) row.classList.add(level);
-    row.querySelector(".v")!.textContent = value;
-    row.querySelector(".note")!.textContent = note;
+    setOneClass(row, ["green", "yellow", "red"], level && !this.rule.plainInstruments ? level : null);
+    setText(row.querySelector(".v")!, value);
+    setText(row.querySelector(".note")!, note);
   }
 }
 

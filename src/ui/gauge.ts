@@ -1,5 +1,6 @@
 // 丸い針の計器。文字盤（目盛り・色の帯・ネジ）は一度だけ描いてとっておき、
 // 毎フレームは針と表示窓だけを描き直す。
+import { elementSize, type ElementSize } from "./dom";
 
 export interface Arc {
   from: number;
@@ -60,12 +61,15 @@ export class RoundGauge {
   private shown: number | null = null;
   /** 計器も数値だけ（リアル）：色の帯を描かない */
   private plain = false;
+  /** 画面の上での計器の大きさ（変わったときだけ更新される） */
+  private cssSize: ElementSize;
 
   constructor(
     private canvas: HTMLCanvasElement,
     private spec: GaugeSpec,
   ) {
     this.ctx = canvas.getContext("2d")!;
+    this.cssSize = elementSize(canvas);
     canvas.setAttribute("role", "img");
     canvas.setAttribute("aria-label", spec.title);
   }
@@ -83,7 +87,7 @@ export class RoundGauge {
   }
 
   private fit() {
-    const size = this.canvas.clientWidth;
+    const size = this.cssSize.w;
     const dpr = window.devicePixelRatio || 1;
     if (!size || (size === this.size && dpr === this.dpr)) return;
     this.size = size;
