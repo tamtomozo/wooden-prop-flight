@@ -632,3 +632,87 @@ kbd {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   html { scroll-behavior: auto; }
 }
+
+/* ---------- 開発こぼれ話（吹き出し） ----------
+   コミット履歴から拾った開発の話。開発者のアイコン＋吹き出しで、各セクションの終わり（ABOUT だけは頭）に置く。
+   本文は devtalk.js が1行にたたみ、「続きを読む」で全文を出す（JS が動かないときは最初から全文） */
+.devtalk { margin-top: 40px; display: grid; gap: 12px; max-width: 40em; }
+.devtalk.lead-talk { margin: 0 0 56px; }
+.feature + .devtalk { margin-top: clamp(40px, 6vw, 64px); }
+.talk { display: flex; gap: 14px; align-items: flex-start; }
+.talk .who {
+  flex: none;
+  width: 54px; height: 54px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font: 700 0.68rem/1 var(--sans);
+  letter-spacing: 0.02em;
+  color: var(--accent);
+}
+.bubble {
+  position: relative;
+  min-width: 0;
+  padding: 11px 16px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  font-size: 0.88rem;
+  line-height: 1.8;
+  color: #d9d6cd;
+}
+.bubble::before { /* 吹き出しのしっぽ */
+  content: "";
+  position: absolute;
+  left: -7px; top: 20px;
+  width: 12px; height: 12px;
+  background: inherit;
+  border-left: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  transform: rotate(45deg);
+}
+.bubble .k { display: block; font-size: 0.76rem; letter-spacing: 0.12em; color: var(--accent); margin-bottom: 2px; }
+.bubble .tx { display: block; }
+.bubble.fold:not(.open) .tx {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+}
+.bubble-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: 700 0.8rem/1.4 var(--sans);
+  color: var(--accent);
+}
+.bubble-more::after {
+  content: "";
+  width: 6px; height: 6px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.2s;
+}
+.bubble.open .bubble-more::after { transform: translateY(1px) rotate(-135deg); }
+.bubble-more:hover { text-decoration: underline; }
+.bubble-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bubble-more[hidden] { display: none; }
+.bubble.open .bubble-more .m, .bubble:not(.open) .bubble-more .c { display: none; }
+/* 紙の章（コース）では紙の色に */
+.courses .talk .who { background: #fbf6e8; border-color: #d6c9a5; color: #a8692f; }
+.courses .bubble { background: #fbf6e8; border-color: #d6c9a5; color: #4d473a; }
+.courses .bubble::before { border-color: #d6c9a5; }
+.courses .bubble .k, .courses .bubble-more { color: #a8692f; }
+@media (max-width: 520px) {
+  .talk { gap: 12px; }
+  .talk .who { width: 46px; height: 46px; font-size: 0.6rem; }
+}

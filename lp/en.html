@@ -72,6 +72,16 @@
       <!-- ===== Concept ===== -->
       <section class="section concept" id="about">
         <div class="wrap">
+          <!-- 開発こぼれ話（コミット履歴（2026-11-22〜11-24）と、その前の試作から） -->
+          <div class="devtalk lead-talk">
+            <div class="talk">
+              <span class="who" aria-hidden="true">Tamuzo</span>
+              <p class="bubble">
+                <b class="k">The idea</b>
+                <span class="tx">What I wanted was a journey flown on judgment, not stick skills. The first prototype even had money and a deadline to make an air show. Both came out — what's left is weather, fuel, and the courage to turn back.</span>
+              </p>
+            </div>
+          </div>
           <p class="eyebrow">ABOUT</p>
           <h2>Not a game about going fast.<br />A game about <em>getting there</em>.</h2>
           <p class="section-lead">
@@ -139,6 +149,17 @@
             </div>
           </article>
 
+          <!-- 開発こぼれ話（c2ad62a・00a5c61・5081111） -->
+          <div class="devtalk">
+            <div class="talk">
+              <span class="who" aria-hidden="true">Tamuzo</span>
+              <p class="bubble">
+                <b class="k">Reworking sea &amp; mountains</b>
+                <span class="tx">At first there was only a map over land. Sea is now worked out per leg from the shape of the coast: stop over water and you ditch, with no spare-prop recovery. For mountains, climb fades with height — unchanged up to 1000 m, half at 3000 m, zero at 5000 m. There used to be a 2D side view as well, but it was cut down to the single 3D view.</span>
+              </p>
+            </div>
+          </div>
+
           <article class="feature">
             <figure class="shot"><img src="img/en/hangar.jpg" alt="The hangar screen: rumors from local people, the four scoring categories, difficulty, and the setup tabs" loading="lazy" width="1440" height="900" /></figure>
             <div class="feature-text">
@@ -164,6 +185,17 @@
               </ul>
             </div>
           </article>
+
+          <!-- 開発こぼれ話（358fcf7・5081111・ed11b8b・ada6938） -->
+          <div class="devtalk">
+            <div class="talk">
+              <span class="who" aria-hidden="true">Tamuzo</span>
+              <p class="bubble">
+                <b class="k">Reworking the hangar &amp; tutorial</b>
+                <span class="tx">The hangar's numbers became diagrams: the triangle of the blade angle, the fuel tank, a cross-section of the bolt. It was split into tabs per heading, and flight time slowed to 1.5× longer. The original "Overland (practice)" was rebuilt into the Sea Route and Mountain Route tutorials, which pause the flight and light up the gauges. The mechanic only got the name "Gen" much later.</span>
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -236,6 +268,17 @@
           </div>
 
           <figure class="shot wide"><img src="img/en/courses.jpg" alt="The course select screen: a map for each course, with Fly now and Prepare in hangar buttons" loading="lazy" width="1440" height="900" /></figure>
+
+          <!-- 開発こぼれ話（c2ad62a・00a5c61・40033fc） -->
+          <div class="devtalk">
+            <div class="talk">
+              <span class="who" aria-hidden="true">Tamuzo</span>
+              <p class="bubble">
+                <b class="k">Reworking the courses</b>
+                <span class="tx">The three sea courses and the mountain crossing went in on the same day, the two sea-and-mountain courses the day after. The tricky one was "Across the Far Sea, Over the Range". The prop can't be swapped mid-trip, so a climb prop clears the pass but leaves the sea crossing short on fuel, while a cruise prop makes the sea easy but can't get over the pass. The pass height and sea length are tuned so you have to pick one.</span>
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -263,6 +306,17 @@
           </div>
 
           <p class="more">A <b>personal best</b> for each course, and <b>10 achievements</b> whose titles stay hidden as "???". Earn "Ocean crossed" to unlock an extra fuel tank.</p>
+
+          <!-- 開発こぼれ話（cfcf86d） -->
+          <div class="devtalk">
+            <div class="talk">
+              <span class="who" aria-hidden="true">Tamuzo</span>
+              <p class="bubble">
+                <b class="k">About records &amp; achievements</b>
+                <span class="tx">Personal bests, ten hidden achievements and the locals' rumors came from an experiment: mapping the structure of a sales letter onto a game. The "Next trip" panel on the final screen, showing the points to the next rank and how to get them, came from it too. Achievement titles stay "???" until you earn them.</span>
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -304,6 +358,17 @@
               </dl>
             </div>
           </div>
+
+          <!-- 開発こぼれ話（9f06b2b・1c347fb・d85035b・0ede775） -->
+          <div class="devtalk">
+            <div class="talk">
+              <span class="who" aria-hidden="true">Tamuzo</span>
+              <p class="bubble">
+                <b class="k">Lighter &amp; easier to play</b>
+                <span class="tx">Switching parts off one at a time showed that nearly half the in-flight cost was 2D gauge drawing. Now a gauge only redraws when its needle visibly moves, and in-flight fps on my machine went from about 80 to 140–180. Scenery draw calls were batched from about 120 down to 25, and slower PCs drop the resolution automatically. The English version can be switched on right inside the game, too.</span>
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -332,5 +397,6 @@
         </linearGradient>
       </defs>
     </svg>
+    <script src="devtalk.js" defer></script>
   </body>
 </html>
