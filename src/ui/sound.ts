@@ -134,6 +134,46 @@ export class Sound {
     }
   }
 
+  /**
+   * ボタンやタブを押したときの短い音。
+   * ボタンは木を軽く叩いたような「コッ」、タブは少し高く軽い「チッ」。
+   */
+  click(kind: "button" | "tab") {
+    this.ensure();
+    const ctx = this.ctx;
+    if (!ctx || !this.enabled) return;
+    const t = ctx.currentTime + 0.005;
+    const tab = kind === "tab";
+    const len = tab ? 0.035 : 0.06;
+
+    // 音の芯：高いところから一瞬で下がる正弦波
+    const o = ctx.createOscillator();
+    o.type = "sine";
+    o.frequency.setValueAtTime(tab ? 2300 : 1250, t);
+    o.frequency.exponentialRampToValueAtTime(tab ? 1500 : 520, t + len);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(tab ? 0.06 : 0.11, t + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.001, t + len);
+    o.connect(g).connect(this.master);
+    o.start(t);
+    o.stop(t + len + 0.02);
+
+    // 当たった瞬間の「カ」：ノイズをごく短く
+    const n = ctx.createBufferSource();
+    n.buffer = this.noiseBuffer;
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = tab ? 5000 : 2800;
+    bp.Q.value = 1.2;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(tab ? 0.05 : 0.08, t);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.018);
+    n.connect(bp).connect(ng).connect(this.master);
+    n.start(t, Math.random());
+    n.stop(t + 0.03);
+  }
+
   /** 実績を手に入れたときの、短いチャイム（ド・ミ・ソ・ド） */
   chime() {
     this.ensure();

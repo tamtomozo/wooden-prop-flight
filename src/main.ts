@@ -155,6 +155,19 @@ try {
 setSound(soundPref !== "off");
 soundBtn.addEventListener("click", () => setSound(!sound.isEnabled()));
 for (const ev of ["pointerdown", "keydown"]) window.addEventListener(ev, () => sound.ensure());
+// ボタン・タブ・チェックを押したときの音。タイトル画面などは stopPropagation するのでキャプチャで拾い、
+// 鳴らすのは各ボタンの処理のあと（setTimeout）にする。こうすると「音：オフ」を押した瞬間は鳴らず、
+// 「音：オン」に戻したときは鳴る。押せないボタンは click が来ない
+document.addEventListener(
+  "click",
+  (e) => {
+    const el = (e.target as Element | null)?.closest?.('button, [role="button"], input[type="checkbox"]');
+    if (!el) return;
+    const kind = el.getAttribute("role") === "tab" || el instanceof HTMLInputElement ? "tab" : "button";
+    setTimeout(() => sound.click(kind), 0);
+  },
+  true,
+);
 
 function updateHud() {
   const f = flight;
